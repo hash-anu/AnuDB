@@ -180,10 +180,10 @@ AnuDB supports various query operations using a JSON-based query language:
 ### Creating and Populating a Collection
 
 ```cpp
-#include "anudb/Database.h"
+#include "Database.h"
 #include <iostream>
 
-anudb::Database db("./product_db", anudb::CompressionType::ZSTD);
+anudb::Database db("./product_db");
 db.open();
 
 // Create a collection
