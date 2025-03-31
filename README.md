@@ -2,7 +2,7 @@
 
 AnuDB is a lightweight, embedded document database designed for C++ applications, offering efficient storage of JSON documents through MessagePack serialization. It provides a serverless, schema-less solution for applications requiring flexible data management with robust query capabilities.
 
-As part of this repository, we have included a **stress test** that ingests **100,000 documents across 8 concurrent threads**. We encourage you to run this stress test on your platform and evaluate the ingestion performance. Your feedback on execution time and system behavior would be invaluable in further optimizing AnuDB’s performance. 
+As part of this repository, we have included a **stress test** that ingests **100,000 documents across 8 concurrent threads**. We encourage you to run this stress test on your platform and evaluate the ingestion/read/query performance. Your feedback on execution time and system behavior would be invaluable in further optimizing AnuDB’s performance. 
 
 In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [StorageEngine.cpp](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.cpp)  and [StorageEngine.h](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.h). Based on these configurations, you can get your desired performance results tailored to your specific platform requirements.
 
