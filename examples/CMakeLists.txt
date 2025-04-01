@@ -33,3 +33,15 @@ target_link_libraries(listCollections PRIVATE
 target_include_directories(listCollections PRIVATE
     ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
 )
+
+add_executable(ExportThenImportCollection AnuDBExportThenImport.cpp)
+
+# Link against your project library 
+target_link_libraries(ExportThenImportCollection PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(ExportThenImportCollection PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
