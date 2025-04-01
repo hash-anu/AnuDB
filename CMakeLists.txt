@@ -79,4 +79,4 @@ add_executable(AnuDB ${CMAKE_SOURCE_DIR}/src/main.cpp)
 # Link RocksDB and Storage Engine
 target_link_libraries(AnuDB libanu)
 
-
+add_subdirectory(examples)
