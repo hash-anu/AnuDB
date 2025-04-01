@@ -166,11 +166,11 @@ Document Document::fromJson(const std::string& id, const std::string& jsonStr) {
 
 // Convert Document to MessagePack format
 std::vector<uint8_t> Document::to_msgpack() const {
-    return json::to_msgpack(json{ {"id", id_},  {"data", data_} });
+    return json::to_msgpack(json{ {"_id", id_}, {"data", data_} });
 }
 
 // Deserialize from MessagePack format
 Document Document::from_msgpack(const std::vector<uint8_t>& msgpack_data) {
     json j = json::from_msgpack(msgpack_data);
-    return Document{ j["id"], j["data"] };
+    return Document{ j["_id"], j["data"] };
 }
