@@ -63,7 +63,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/your/toolchain.cmake \
 ```
 
 ## Examples
-Examples of AnuDB database have been added to the examples folder. Currently, there are three examples available, with many more to be added in the near future. Please check back for additional resources as they become available. But based on APIs listed in table you can use AnuDB for your service.
+Examples of AnuDB database have been added to the examples folder. Currently, there are four examples available, with many more to be added in the near future. Please check back for additional resources as they become available. But based on APIs listed in table you can use AnuDB for your service.
 
 ## Quick Start
 
