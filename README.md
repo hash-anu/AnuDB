@@ -62,6 +62,9 @@ cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/your/toolchain.cmake \
       -DZSTD_LIB_DIR=/path/to/zstd/lib ..
 ```
 
+## Examples
+Examples of AnuDB database have been added to the examples folder. Currently, there are two examples available, with many more to be added in the near future. Please check back for additional resources as they become available.
+
 ## Quick Start
 
 ```cpp
