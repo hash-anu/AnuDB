@@ -483,8 +483,8 @@ Status Collection::importFromJsonFile(const std::string& filePath) {
 
 			// Generate a unique document ID
 			std::string docId;
-			if (item.contains("id")) {
-				docId = item["id"].get<std::string>();
+			if (item.contains("_id")) {
+				docId = item["_id"].get<std::string>();
 			}
 			else {
 				// Generate a unique ID if not provided
