@@ -24,7 +24,7 @@ In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB o
 
 ## Prerequisites
 
-- C++11 >= compatible compiler (GCC 4.8+ or Clang 3.4+)
+- C++11 >= compatible compiler
 - CMake 3.10 or higher
 - ZSTD development libraries (optional, for compression support)
 
