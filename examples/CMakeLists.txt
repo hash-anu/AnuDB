@@ -45,3 +45,15 @@ target_link_libraries(ExportThenImportCollection PRIVATE
 target_include_directories(ExportThenImportCollection PRIVATE
     ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
 )
+
+add_executable(WriteSetUpdateReadDocument AnuDBWriteSetUpdateReadDocument.cpp)
+
+# Link against your project library 
+target_link_libraries(WriteSetUpdateReadDocument PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WriteSetUpdateReadDocument PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
