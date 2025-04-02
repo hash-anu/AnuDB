@@ -138,3 +138,25 @@ target_link_libraries(WriteOrOperator PRIVATE
 target_include_directories(WriteOrOperator PRIVATE
     ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
 )
+add_executable(WriteEqOperator AnuDBWriteEqOperator.cpp)
+
+# Link against your project library 
+target_link_libraries(WriteEqOperator PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WriteEqOperator PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
+add_executable(WriteOrderByOperator AnuDBWriteOrderByOperator.cpp)
+
+# Link against your project library 
+target_link_libraries(WriteOrderByOperator PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WriteOrderByOperator PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
