@@ -30,7 +30,7 @@ In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB o
 
 ## Building from Source
 There is no need to install any other third party libraries.
-Below commands will generate AnuDB.exe bin which executes all operations supported by AnuDB also it will generate liblibanu.a static library.
+Below commands will generate AnuDB.exe bin which executes all operations supported by AnuDB, also it will generate liblibanu.a static library, you can use it in your application with required header files.
 
 ```bash
 
