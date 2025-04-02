@@ -57,3 +57,39 @@ target_link_libraries(WriteSetUpdateReadDocument PRIVATE
 target_include_directories(WriteSetUpdateReadDocument PRIVATE
     ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
 )
+
+add_executable(WriteUnsetUpdateReadDocument AnuDBWriteUnSetUpdateReadDocument.cpp)
+
+# Link against your project library 
+target_link_libraries(WriteUnsetUpdateReadDocument PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WriteUnsetUpdateReadDocument PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
+
+add_executable(WritePushUpdateReadDocument AnuDBWritePushUpdateReadDocument.cpp)
+
+# Link against your project library 
+target_link_libraries(WritePushUpdateReadDocument PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WritePushUpdateReadDocument PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
+
+add_executable(WritePopUpdateReadDocument AnuDBWritePopUpdateReadDocument.cpp)
+
+# Link against your project library 
+target_link_libraries(WritePopUpdateReadDocument PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WritePopUpdateReadDocument PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
