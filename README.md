@@ -107,6 +107,9 @@ int main() {
     return 0;
 }
 ```
+[Samples for normal write -> read operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteReadDocument.cpp)
+[Samples for get list of collections](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBCreateGetDropCollections.cpp)
+[Samples for Export then Import operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBExportThenImport.cpp)
 
 ## API Overview
 
@@ -162,21 +165,21 @@ AnuDB supports various query operations using a JSON-based query language:
 
 | Operator | Description | Example |
 |----------|-------------|---------|
-| `$eq` | Equality match | `{"$eq": {"field": value}}` |
-| `$gt` | Greater than | `{"$gt": {"field": value}}` |
-| `$lt` | Less than | `{"$lt": {"field": value}}` |
-| `$and` | Logical AND | `{"$and": [query1, query2, ...]}` |
-| `$or` | Logical OR | `{"$or": [query1, query2, ...]}` |
-| `$orderBy` | Sort results | `{"$orderBy": {"field": "asc"}}` |
+| `$eq` | Equality match | `{"$eq": {"field": value}}`  [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteEqOperator.cpp) |
+| `$gt` | Greater than | `{"$gt": {"field": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteGtOperator.cpp)|
+| `$lt` | Less than | `{"$lt": {"field": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteLtOperator.cpp) |
+| `$and` | Logical AND | `{"$and": [query1, query2, ...]}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteAndOperator.cpp) |
+| `$or` | Logical OR | `{"$or": [query1, query2, ...]}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteOrOperator.cpp) |
+| `$orderBy` | Sort results | `{"$orderBy": {"field": "asc"}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteOrderByOperator.cpp) |
 
 ### Update Operations
 
 | Operator | Description | Example |
 |----------|-------------|---------|
-| `$set` | Sets field values and supports nested fields using '.' | `{"$set": {"field": value}}` |
-| `$unset` | Removes fields and supports nested fields using '.' | `{"$unset": {"field": ""}}` |
-| `$push` | Adds to arrays | `{"$push": {"array": value}}` |
-| `$pull` | Removes from arrays | `{"$pull": {"array": value}}` |
+| `$set` | Sets field values and supports nested fields using '.' | `{"$set": {"field": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteSetUpdateReadDocument.cpp) |
+| `$unset` | Removes fields and supports nested fields using '.' | `{"$unset": {"field": ""}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteUnSetUpdateReadDocument.cpp)|
+| `$push` | Adds to arrays | `{"$push": {"array": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWritePushUpdateReadDocument.cpp)|
+| `$pull` | Removes from arrays | `{"$pull": {"array": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWritePopUpdateReadDocument.cpp)|
 
 ## Example Usage
 
