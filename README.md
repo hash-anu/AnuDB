@@ -18,7 +18,7 @@ In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB o
 - **Flexible Querying**: Support for equality, comparison, logical operators and sorting
 - **Indexing**: Create indexes to speed up queries on frequently accessed fields
 - **Update Operations**: Rich set of document modification operations
-- **Import/Export**: Easy JSON import and export for data migration.JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
+- **Import/Export**: Easy JSON import and export for data migration.Exported JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
 - **C++11 Compatible**: Designed to support a wide range of embedded devices efficiently.
 - **Windows/Linux Support**: Designed for Windows/Linux environments and embedded Linux platforms
 
