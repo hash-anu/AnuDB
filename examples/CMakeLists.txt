@@ -93,3 +93,26 @@ target_link_libraries(WritePopUpdateReadDocument PRIVATE
 target_include_directories(WritePopUpdateReadDocument PRIVATE
     ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
 )
+
+add_executable(WriteGtOperator AnuDBWriteGtOperator.cpp)
+
+# Link against your project library 
+target_link_libraries(WriteGtOperator PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WriteGtOperator PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
+add_executable(WriteLtOperator AnuDBWriteLtOperator.cpp)
+
+# Link against your project library 
+target_link_libraries(WriteLtOperator PRIVATE
+    libanu
+)
+
+# Add include directories
+target_include_directories(WriteLtOperator PRIVATE
+    ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/json
+)
