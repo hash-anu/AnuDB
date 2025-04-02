@@ -107,11 +107,11 @@ int main() {
     return 0;
 }
 ```
-[Samples for normal write -> read operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteReadDocument.cpp)
+[Sample for normal write -> read operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteReadDocument.cpp)
 
-[Samples for get list of collections](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBCreateGetDropCollections.cpp)
+[Sample for get list of collections](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBCreateGetDropCollections.cpp)
 
-[Samples for Export then Import operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBExportThenImport.cpp)
+[Sample for Export then Import operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBExportThenImport.cpp)
 
 ## API Overview
 
