@@ -1,6 +1,6 @@
 # AnuDB
 
-AnuDB is a lightweight, embedded document database designed for C++ applications, offering efficient storage of JSON documents through MessagePack serialization. It provides a serverless, schema-less solution for applications requiring flexible data management with robust query capabilities.
+AnuDB is a lightweight, serverless document database designed for C++ applications, offering efficient storage of JSON documents through MessagePack serialization. It provides a serverless, schema-less solution for applications requiring flexible data management with robust query capabilities.
 
 As part of this repository, we have included a **stress test** that ingests **100,000 documents across 8 concurrent threads**. We encourage you to run this stress test on your platform and evaluate the ingestion/read/query performance. Your feedback on execution time and system behavior would be invaluable in further optimizing AnuDB’s performance. 
 
@@ -18,7 +18,7 @@ In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB o
 - **Flexible Querying**: Support for equality, comparison, logical operators and sorting
 - **Indexing**: Create indexes to speed up queries on frequently accessed fields
 - **Update Operations**: Rich set of document modification operations
-- **Import/Export**: Easy JSON import and export for data migration.JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
+- **Import/Export**: Easy JSON import and export for data migration.Exported JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
 - **C++11 Compatible**: Designed to support a wide range of embedded devices efficiently.
 - **Windows/Linux Support**: Designed for Windows/Linux environments and embedded Linux platforms
 
@@ -30,7 +30,7 @@ In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB o
 
 ## Building from Source
 There is no need to install any other third party libraries.
-Below commands will generate AnuDB.exe bin which executes all operations supported by AnuDB also it will generate liblibanu.a static library.
+Below commands will generate AnuDB.exe bin which executes all operations supported by AnuDB, also it will generate liblibanu.a static library, you can use it in your application with required header files.
 
 ```bash
 
@@ -63,7 +63,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/your/toolchain.cmake \
 ```
 
 ## Examples
-Examples of AnuDB database have been added to the examples folder. Currently, there are four examples available, with many more to be added in the near future. Please check back for additional resources as they become available. But based on APIs listed in table you can use AnuDB for your service.
+Examples of AnuDB database have been added to the examples folder. 
 
 ## Quick Start
 
@@ -107,6 +107,11 @@ int main() {
     return 0;
 }
 ```
+[Sample for normal write -> read operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteReadDocument.cpp)
+
+[Sample for get list of collections](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBCreateGetDropCollections.cpp)
+
+[Sample for Export then Import operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBExportThenImport.cpp)
 
 ## API Overview
 
@@ -162,21 +167,21 @@ AnuDB supports various query operations using a JSON-based query language:
 
 | Operator | Description | Example |
 |----------|-------------|---------|
-| `$eq` | Equality match | `{"$eq": {"field": value}}` |
-| `$gt` | Greater than | `{"$gt": {"field": value}}` |
-| `$lt` | Less than | `{"$lt": {"field": value}}` |
-| `$and` | Logical AND | `{"$and": [query1, query2, ...]}` |
-| `$or` | Logical OR | `{"$or": [query1, query2, ...]}` |
-| `$orderBy` | Sort results | `{"$orderBy": {"field": "asc"}}` |
+| `$eq` | Equality match | `{"$eq": {"field": value}}`  [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteEqOperator.cpp) |
+| `$gt` | Greater than | `{"$gt": {"field": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteGtOperator.cpp)|
+| `$lt` | Less than | `{"$lt": {"field": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteLtOperator.cpp) |
+| `$and` | Logical AND | `{"$and": [query1, query2, ...]}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteAndOperator.cpp) |
+| `$or` | Logical OR | `{"$or": [query1, query2, ...]}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteOrOperator.cpp) |
+| `$orderBy` | Sort results | `{"$orderBy": {"field": "asc"}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteOrderByOperator.cpp) |
 
 ### Update Operations
 
 | Operator | Description | Example |
 |----------|-------------|---------|
-| `$set` | Sets field values and supports nested fields using '.' | `{"$set": {"field": value}}` |
-| `$unset` | Removes fields and supports nested fields using '.' | `{"$unset": {"field": ""}}` |
-| `$push` | Adds to arrays | `{"$push": {"array": value}}` |
-| `$pull` | Removes from arrays | `{"$pull": {"array": value}}` |
+| `$set` | Sets field values and supports nested fields using '.' | `{"$set": {"field": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteSetUpdateReadDocument.cpp) |
+| `$unset` | Removes fields and supports nested fields using '.' | `{"$unset": {"field": ""}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWriteUnSetUpdateReadDocument.cpp)|
+| `$push` | Adds to arrays | `{"$push": {"array": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWritePushUpdateReadDocument.cpp)|
+| `$pull` | Removes from arrays | `{"$pull": {"array": value}}` [example](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBWritePopUpdateReadDocument.cpp)|
 
 ## Example Usage
 
