@@ -25,7 +25,7 @@
 #include <signal.h>
 #include <thread>
 #include <chrono>
-#define CONCURRENT_THREADS 32
+#define CONCURRENT_THREADS 1
 #define ANUDB_REQUEST_TOPIC "anudb/request"
 #define ANUDB_RESPONSE_TOPIC "anudb/response/"
 
@@ -60,7 +60,6 @@ public:
         }
         nng_msg* msg = nullptr;
         int rv;
-
         if (w->state == INIT) {
             w->state = RECV;
             nng_ctx_recv(w->ctx, w->aio);
@@ -346,7 +345,14 @@ private:
                 if (collMap_.count(collectionName) == 0) {
                     resp["status"] = "error";
                     resp["message"] = "Collection :" + collectionName + " is not found";
-                    return;
+
+                    Collection* coll = db_->getCollection(collectionName);
+                    if (coll != NULL) {
+                        collMap_[collectionName] = coll;
+                    }
+                    else {
+                        return;
+                    }
                 }
                 Collection* coll = collMap_[collectionName];
                 std::string docId = "";
@@ -378,7 +384,14 @@ private:
                 if (collMap_.count(collectionName) == 0) {
                     resp["status"] = "error";
                     resp["message"] = "Collection :" + collectionName + " is not found";
-                    return;
+
+                    Collection* coll = db_->getCollection(collectionName);
+                    if (coll != NULL) {
+                        collMap_[collectionName] = coll;
+                    }
+                    else {
+                        return;
+                    }
                 }
                 Collection* coll = collMap_[collectionName];
                 std::string docId = "";
@@ -429,7 +442,13 @@ private:
                 if (collMap_.count(collectionName) == 0) {
                     resp["status"] = "error";
                     resp["message"] = "Collection :" + collectionName + " is not found";
-                    return;
+                    Collection* coll = db_->getCollection(collectionName);
+                    if (coll != NULL) {
+                        collMap_[collectionName] = coll;
+                    }
+                    else {
+                        return;
+                    }
                 }
                 Collection* coll = collMap_[collectionName];
                 if (req.contains("document_id")) {
@@ -452,10 +471,8 @@ private:
         }
     }
 
-
-
     void handle_request(struct work* wrk,const std::string& topic, const std::string& payload) {
-        std::lock_guard<std::mutex> lock(mtx);
+        //std::lock_guard<std::mutex> lock(mtx);
         json req, resp;
         struct work* w = wrk;
         std::string response_topic = ANUDB_RESPONSE_TOPIC;
