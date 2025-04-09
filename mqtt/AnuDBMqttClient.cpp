@@ -105,12 +105,11 @@ public:
 
 			std::cout << "RECV: '" << payload_str << "' FROM: '" << topic << "'\n";
 
-			std::string response_str;
 			if (topic == ANUDB_REQUEST_TOPIC && w->client) {
-				response_str = w->client->handle_request(w, topic, payload_str);
+				w->client->handle_request(w, topic, payload_str);
 			}
 			else {
-				response_str = "{\"error\": \"Unsupported topic\"}";
+				std::string response_str = "{\"error\": \"Unsupported topic\"}";
 
 				// Create a new message for each response
 				nng_msg* new_msg;
@@ -230,6 +229,7 @@ public:
         for (auto w : workers_) {
             w->exit = true;
         }
+        collMap_.clear();
         Status status = db_->close();
         if (!status.ok()) {
             std::cerr << "Failed to close database: " << status.message() << std::endl;
@@ -278,50 +278,231 @@ private:
         }
     }
 
-    std::string handle_request(struct work* wrk,const std::string& topic, const std::string& payload) {
-        json req, resp;
-        struct work* w = wrk;
+    void send_response(const std::string reply, struct work* wrk, const std::string& response_topic) {
+        // Create a new message for each response
+        nng_msg* new_msg;
+        nng_mqtt_msg_alloc(&new_msg, 0);
+        nng_mqtt_msg_set_packet_type(new_msg, NNG_MQTT_PUBLISH);
+        nng_mqtt_msg_set_publish_topic(new_msg, response_topic.c_str());
+        nng_mqtt_msg_set_publish_payload(new_msg, (uint8_t*)reply.c_str(), reply.size());
+
+        std::cout << "SEND: " << reply << " to topic: " << response_topic << std::endl;
+
+        // Allocate a new AIO for this send
+        nng_aio* send_aio;
+        nng_aio_alloc(&send_aio, nullptr, nullptr);
+        nng_aio_set_msg(send_aio, new_msg);
+        nng_ctx_send(wrk->ctx, send_aio);
+        nng_msg_free(new_msg);
+        nng_aio_free(send_aio);
+    }
+
+    void handle_create_collection(json& req, json& resp) {
         try {
-            req = json::parse(payload);
-            std::string cmd = req["command"];
-            std::string req_id = req["request_id"];
-            std::string response_topic = ANUDB_RESPONSE_TOPIC;
-
-            resp["request_id"] = req_id;
-            resp["status"] = "success";
-            resp["message"] = "Command received:" + cmd;
-
-            int num_replies = 3;  // Example: send 3 responses
-            for (int i = 0; i < num_replies; ++i) {
-                // Create a new message for each response
-                nng_msg* new_msg;
-                nng_mqtt_msg_alloc(&new_msg, 0);
-
-                std::string response_topic = ANUDB_RESPONSE_TOPIC + std::to_string(i + 1);
-
-                // Modify payload if needed
-                std::string new_payload = resp.dump() + " #" + std::to_string(i + 1);
-
-                nng_mqtt_msg_set_packet_type(new_msg, NNG_MQTT_PUBLISH);
-                nng_mqtt_msg_set_publish_topic(new_msg, response_topic.c_str());
-                nng_mqtt_msg_set_publish_payload(new_msg, (uint8_t*)new_payload.c_str(), new_payload.size());
-
-                std::cout << "SEND: " << new_payload << " to topic: " << response_topic << std::endl;
-
-                // Allocate a new AIO for this send
-                nng_aio* send_aio;
-                nng_aio_alloc(&send_aio, nullptr, nullptr);
-                nng_aio_set_msg(send_aio, new_msg);
-                nng_ctx_send(w->ctx, send_aio);
-                nng_msg_free(new_msg);
-                nng_aio_free(send_aio);
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                Status status = db_->createCollection(collectionName);
+                if (!status.ok()) {
+                    resp["status"] = "error while creating collection";
+                    resp["message"] = status.message();
+                }
+                else {
+                    collMap_[collectionName] = db_->getCollection(collectionName);
+                    resp["status"] = "success";
+                    resp["message"] = collectionName + " collection created successfully in AnuDB.";
+                }
+            }
+        }
+        catch (const std::exception & e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+        }
+    }
+    void handle_delete_collection(json& req, json& resp) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                Status status = db_->dropCollection(collectionName);
+                if (!status.ok()) {
+                    resp["status"] = "error while deleting collection";
+                    resp["message"] = status.message();
+                }
+                else {
+                    collMap_.erase(collectionName);
+                    resp["status"] = "success";
+                    resp["message"] = collectionName + " collection deleted successfully in AnuDB.";
+                }
             }
         }
         catch (const std::exception& e) {
             resp["status"] = "error";
             resp["message"] = std::string("Exception: ") + e.what();
         }
-        return resp.dump();
+    }
+    void handle_create_document(json& req, json& resp) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                if (collMap_.count(collectionName) == 0) {
+                    resp["status"] = "error";
+                    resp["message"] = "Collection :" + collectionName + " is not found";
+                    return;
+                }
+                Collection* coll = collMap_[collectionName];
+                std::string docId = "";
+                if (req.contains("document_id")) {
+                    docId = req["document_id"];
+                }
+                json data = req["content"];
+                Document doc(docId, data);
+                Status status = coll->createDocument(doc);
+                if (!status.ok()) {
+                    resp["status"] = "error while adding document in collection " + collectionName;
+                    resp["message"] = status.message();
+                    return;
+                }
+                resp["status"] = "success";
+                resp["docId"] = doc.id();
+                resp["message"] = "Document added in collection " + collectionName;
+            }
+        }
+        catch (const std::exception& e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+        }
+    }
+    void handle_read_document(json& req, json& resp, struct work* wrk, std::string& response_topic) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                if (collMap_.count(collectionName) == 0) {
+                    resp["status"] = "error";
+                    resp["message"] = "Collection :" + collectionName + " is not found";
+                    return;
+                }
+                Collection* coll = collMap_[collectionName];
+                std::string docId = "";
+                if (req.contains("document_id")) {
+                    docId = req["document_id"];
+                    Document doc;
+                    Status status = coll->readDocument(docId, doc);
+					if (!status.ok()) {
+						resp["status"] = "failed to read document";
+						resp["message"] = status.message();
+						return;
+					}
+					send_response(doc.data().dump(), wrk, response_topic);
+					return;
+				}
+				else {
+					uint32_t limit = UINT32_MAX;
+					if (req.contains("limit")) {
+						limit = req["limit"];
+					}
+					auto cursor = coll->createCursor();
+					uint64_t cnt = 0;
+					while (cursor->isValid() && cnt < limit) {
+						Document doc;
+						Status status = cursor->current(&doc);
+
+						if (status.ok()) {
+							send_response(doc.data().dump(), wrk, response_topic);
+						}
+						else {
+							std::cerr << "Error reading document: " << status.message() << std::endl;
+						}
+						cnt++;
+						cursor->next();
+					}
+				}
+			}
+        }
+        catch (const std::exception& e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+        }
+    }
+    void handle_delete_document(json& req, json& resp) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                if (collMap_.count(collectionName) == 0) {
+                    resp["status"] = "error";
+                    resp["message"] = "Collection :" + collectionName + " is not found";
+                    return;
+                }
+                Collection* coll = collMap_[collectionName];
+                if (req.contains("document_id")) {
+                    std::string docId = req["document_id"];
+                    Status status = coll->deleteDocument(docId);
+                    if (!status.ok()) {
+                        resp["status"] = "error while deleting document in collection " + collectionName;
+                        resp["message"] = status.message();
+                        return;
+                    }
+                    resp["status"] = "success";
+                    resp["docId"] = docId;
+                    resp["message"] = "Document deleted from collection " + collectionName;
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+        }
+    }
+
+
+
+    void handle_request(struct work* wrk,const std::string& topic, const std::string& payload) {
+        std::lock_guard<std::mutex> lock(mtx);
+        json req, resp;
+        struct work* w = wrk;
+        std::string response_topic = ANUDB_RESPONSE_TOPIC;
+        try {
+            req = json::parse(payload);
+            std::string cmd = req["command"];
+            std::string req_id = req["request_id"];
+            response_topic += req_id;
+            if (cmd == "create_collection") {
+                handle_create_collection(req, resp);
+                send_response(resp.dump(), w, response_topic);
+            }
+            else if (cmd == "delete_collection") {
+                handle_delete_collection(req, resp);
+                send_response(resp.dump(), w, response_topic);
+            }
+            else if (cmd == "create_document") {
+                handle_create_document(req, resp);
+                send_response(resp.dump(), w, response_topic);
+            }
+            else if (cmd == "read_document") {
+                handle_read_document(req, resp, w, response_topic);
+            }
+            else if (cmd == "delete_document") {
+                handle_delete_document(req, resp);
+                send_response(resp.dump(), w, response_topic);
+            }
+#if 0
+            else if (cmd == "create_index") {
+                handle_create_index(req, resp);
+            }
+            else if (cmd == "delete_index") {
+                handle_delete_index(req, resp);
+            }
+#endif
+            else {
+                resp["status"] = "error";
+                resp["message"] = "Unknown command: " + cmd;
+                send_response(resp.dump(), w, response_topic);
+            }
+        }
+        catch (const std::exception& e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+            send_response(resp.dump(), w, response_topic);
+        }
+        return;
     }
 
     std::string broker_url_;
@@ -330,6 +511,8 @@ private:
     Database* db_;
     bool running_;
     std::vector<work*> workers_;
+    std::mutex mtx;
+    std::unordered_map<std::string, Collection*> collMap_;
 };
 
 volatile sig_atomic_t running = 1;
