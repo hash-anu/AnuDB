@@ -25,7 +25,7 @@
 #include <signal.h>
 #include <thread>
 #include <chrono>
-#define CONCURRENT_THREADS 1
+#define CONCURRENT_THREADS 32
 #define ANUDB_REQUEST_TOPIC "anudb/request"
 #define ANUDB_RESPONSE_TOPIC "anudb/response/"
 
@@ -44,134 +44,156 @@ public:
 
     enum State { INIT, RECV, WAIT, SEND };
 
-    struct work {
-        State state;
-        nng_aio* aio;
-        nng_msg* msg;
+    struct Work {
+        enum class State { INIT, RECV, WAIT, SEND };
+        Work() {
+            reply = NULL;
+        }
+
+        State state = State::INIT;
+        nng_aio* aio = nullptr;
+        nng_msg* msg = nullptr;
         nng_ctx ctx;
         AnuDBMqttClient* client;  // Pointer to client instance
-        bool exit;
+
+        std::string* reply;
+        ~Work() {
+        }
     };
 
     static void client_cb(void* arg) {
-        struct work* w = static_cast<work*>(arg);
-        if (w->exit) {
-            return;
-        }
+        struct Work* work = static_cast<Work*>(arg);
         nng_msg* msg = nullptr;
         int rv;
-        if (w->state == INIT) {
-            w->state = RECV;
-            nng_ctx_recv(w->ctx, w->aio);
-        }
-        else if (w->state == RECV) {
-            if (w->exit) {
-                return;
-            }
-            if ((rv = nng_aio_result(w->aio)) != 0) {
-                w->state = RECV;
-                nng_ctx_recv(w->ctx, w->aio);
-                return;
-            }
-            w->msg = nng_aio_get_msg(w->aio);
-            w->state = WAIT;
-            nng_sleep_aio(0, w->aio);
-        }
-        else if (w->state == WAIT) {
-            msg = w->msg;
-            if (msg == nullptr) {
-                w->state = RECV;
-                nng_ctx_recv(w->ctx, w->aio);
-                return;
-            }
 
-            uint32_t payload_len;
+        switch (work->state) {
+
+        case Work::State::INIT:
+            work->state = Work::State::RECV;
+            nng_ctx_recv(work->ctx, work->aio);
+            break;
+
+        case Work::State::RECV:
+            if ((rv = nng_aio_result(work->aio)) != 0) {
+                std::cerr << "nng_recv_aio failed: " << nng_strerror(rv) << std::endl;
+                work->state = Work::State::RECV;
+                nng_ctx_recv(work->ctx, work->aio);
+                break;
+            }
+            work->msg = nng_aio_get_msg(work->aio);
+            work->state = Work::State::WAIT;
+            nng_sleep_aio(0, work->aio);
+            break;
+
+        case Work::State::WAIT: {
+            msg = work->msg;
+
+            uint32_t topic_len = 0;
+            uint32_t payload_len = 0;
             uint8_t* payload = nng_mqtt_msg_get_publish_payload(msg, &payload_len);
-            uint32_t topic_len;
             const char* recv_topic = nng_mqtt_msg_get_publish_topic(msg, &topic_len);
-
             std::string topic(recv_topic, topic_len);
             std::string payload_str(reinterpret_cast<char*>(payload), payload_len);
-
+            
             if (payload_len == 0 || payload_str.empty()) {
                 std::cout << "Empty payload received on topic '" << topic << "', skipping...\n";
                 nng_msg_free(msg);
-                w->msg = nullptr;
-                w->state = RECV;
-                nng_ctx_recv(w->ctx, w->aio);
+                work->msg = nullptr;
+                work->state = Work::State::RECV;
+                nng_ctx_recv(work->ctx, work->aio);
                 return;
-			}
-
-			std::cout << "RECV: '" << payload_str << "' FROM: '" << topic << "'\n";
-
-			if (topic == ANUDB_REQUEST_TOPIC && w->client) {
-				w->client->handle_request(w, topic, payload_str);
-			}
-			else {
-				std::string response_str = "{\"error\": \"Unsupported topic\"}";
-
-				// Create a new message for each response
-				nng_msg* new_msg;
-				nng_mqtt_msg_alloc(&new_msg, 0);
-
-				std::string response_topic = ANUDB_RESPONSE_TOPIC;
-
-				// Modify payload if needed
-				std::string new_payload = response_str;
-
-				nng_mqtt_msg_set_packet_type(new_msg, NNG_MQTT_PUBLISH);
-				nng_mqtt_msg_set_publish_topic(new_msg, response_topic.c_str());
-				nng_mqtt_msg_set_publish_payload(new_msg, (uint8_t*)new_payload.c_str(), new_payload.size());
-
-				std::cout << "SEND: " << new_payload << " to topic: " << response_topic << std::endl;
-
-				// Allocate a new AIO for this send
-				nng_aio* send_aio;
-				nng_aio_alloc(&send_aio, nullptr, nullptr);
-				nng_aio_set_msg(send_aio, new_msg);
-				nng_ctx_send(w->ctx, send_aio);
-				nng_msg_free(new_msg);
-				nng_aio_free(send_aio);
-			}
-            // Free original received message
-            nng_msg_free(msg);
-            w->msg = nullptr;
-            w->state = SEND;
-        }
-        else if (w->state == SEND) {
-            if (w->exit) return;
-            if ((rv = nng_aio_result(w->aio)) != 0) {
-                std::cerr << "nng_send_aio: " << nng_strerror(rv) << std::endl;
             }
-            w->state = RECV;
-            nng_ctx_recv(w->ctx, w->aio);
+            std::cout << "RECV: '" << std::string(reinterpret_cast<char*>(payload), payload_len)
+                << "' FROM: '" << std::string(recv_topic, topic_len) << "'" << std::endl; 
+            
+            std::string ret = work->client->handle_request(work, topic, payload_str, work);
+            if (ret != "") {
+                work->reply = new std::string(ret);
+            }
+            else {
+                nng_msg_free(msg);
+                work->msg = nullptr;
+                work->state = Work::State::RECV;
+                nng_ctx_recv(work->ctx, work->aio);
+                return;
+            }
+
+            nng_msg_free(work->msg);
+            work->msg = nullptr;
+
+            work->state = Work::State::SEND;
+            client_cb(work);
+            break;
+        }
+
+        case Work::State::SEND:
+            if ((rv = nng_aio_result(work->aio)) != 0) {
+                std::cerr << "nng_send_aio failed: " << nng_strerror(rv) << std::endl;
+                work->state = Work::State::RECV;
+                nng_ctx_recv(work->ctx, work->aio);
+                break;
+            }
+            
+            if (work->reply != NULL) {
+                nng_msg* out_msg = nullptr;
+                if ((rv = nng_mqtt_msg_alloc(&out_msg, 0)) != 0) {
+                    std::cerr << "nng_msg_alloc failed: " << nng_strerror(rv) << std::endl;
+                    work->state = Work::State::RECV;
+                    nng_ctx_recv(work->ctx, work->aio);
+                    break;
+                }
+
+                nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
+                nng_mqtt_msg_set_publish_topic(out_msg, ANUDB_RESPONSE_TOPIC);
+                nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)work->reply->c_str(), work->reply->length());
+                nng_aio_set_msg(work->aio, out_msg);
+                delete work->reply;
+                work->reply = NULL;
+                nng_ctx_send(work->ctx, work->aio);
+            }
+            else {
+                if (work->reply != NULL) {
+                    delete work->reply;
+                    work->reply = NULL;
+                }
+
+                work->state = Work::State::RECV;
+                nng_ctx_recv(work->ctx, work->aio);
+            }
+            break;
+
+        default:
+            std::cerr << "Fatal: Invalid state." << std::endl;
+            std::exit(1);
         }
     }
 
-    struct work* alloc_work() {
-        struct work* w = nullptr;
-        int rv;
+    Work* alloc_work()
+    {
+        Work* work = nullptr;
 
-        if ((w = (work*)nng_alloc(sizeof(*w))) == nullptr) {
+        if ((work = (Work*)nng_alloc(sizeof(*work))) == nullptr) {
             std::cerr << "nng_alloc: " << nng_strerror(NNG_ENOMEM) << std::endl;
             return nullptr;
         }
-        if ((rv = nng_aio_alloc(&w->aio, client_cb, w)) != 0) {
-            std::cerr << "nng_aio_alloc: " << nng_strerror(rv) << std::endl;
-            nng_free(w, sizeof(*w));
+
+        if (nng_aio_alloc(&work->aio, client_cb, work) != 0) {
+            std::cerr << "nng_aio_alloc failed\n";
+            delete work;
             return nullptr;
         }
-        if ((rv = nng_ctx_open(&w->ctx, client_)) != 0) {
-            std::cerr << "nng_ctx_open: " << nng_strerror(rv) << std::endl;
-            nng_aio_free(w->aio);
-            nng_free(w, sizeof(*w));
+
+        if (nng_ctx_open(&work->ctx, client_) != 0) {
+            std::cerr << "nng_ctx_open failed\n";
+            nng_aio_free(work->aio);
+            delete work;
             return nullptr;
         }
-        w->exit = false;
-        w->state = INIT;
-        w->client = this;
-        workers_.push_back(w);
-        return w;
+        work->reply = NULL;
+        work->client = this;
+        work->state = Work::State::INIT;
+        workers_.push_back(work);
+        return work;
     }
 
     bool start() {
@@ -184,7 +206,7 @@ public:
         }
         nng_dialer dialer;
         int rv;
-        struct work* works[CONCURRENT_THREADS];
+        struct Work* works[CONCURRENT_THREADS];
 
         if ((rv = nng_mqtt_client_open(&client_)) != 0) {
             std::cerr << "nng_socket: " << nng_strerror(rv) << std::endl;
@@ -225,36 +247,35 @@ public:
         if (!running_) return;
         running_ = false;
         // Signal workers to stop gracefully
-        for (auto w : workers_) {
-            w->exit = true;
-        }
         collMap_.clear();
         Status status = db_->close();
         if (!status.ok()) {
             std::cerr << "Failed to close database: " << status.message() << std::endl;
         }
         std::cout << "Closing in progress..\n";
-        // Now stop aio and give callbacks time to bail out
-        for (auto w : workers_) {
-            nng_aio_stop(w->aio);
-        }
-
-        // Wait a bit to ensure all callbacks exited
-        std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-
-        for (auto w : workers_) {
-            nng_aio_free(w->aio);
-            int rv = nng_ctx_close(w->ctx);
-            if (rv != 0) {
-                std::cerr << "Error closing ctx[" << w->ctx.id << "]: " << nng_strerror(rv) << std::endl;
+        // Stop receiving/sending new work
+        for (auto* work : workers_) {
+            if (work) {
+                if (work->aio) {
+                    nng_aio_stop(work->aio);  // request cancel, non-blocking
+                }
             }
-            nng_free(w, sizeof(*w));
         }
-
+        // Let in-flight callbacks safely return
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        for (auto* work : workers_) {
+            if (work) {
+                if (work->aio) {
+                    nng_aio_free(work->aio);
+                    work->aio = nullptr;
+                }
+                nng_ctx_close(work->ctx);  // now safe
+            }
+        }
         workers_.clear();
-        nng_close(client_);
-        std::cout << "MQTT client stopped" << std::endl;
 
+        std::cout << "Client shutdown complete.\n";
+        std::cout << "MQTT client stopped" << std::endl;
     }
 
 private:
@@ -275,25 +296,6 @@ private:
 
             std::cout << "Subscribed to topic: " << request_topic << std::endl;
         }
-    }
-
-    void send_response(const std::string reply, struct work* wrk, const std::string& response_topic) {
-        // Create a new message for each response
-        nng_msg* new_msg;
-        nng_mqtt_msg_alloc(&new_msg, 0);
-        nng_mqtt_msg_set_packet_type(new_msg, NNG_MQTT_PUBLISH);
-        nng_mqtt_msg_set_publish_topic(new_msg, response_topic.c_str());
-        nng_mqtt_msg_set_publish_payload(new_msg, (uint8_t*)reply.c_str(), reply.size());
-
-        std::cout << "SEND: " << reply << " to topic: " << response_topic << std::endl;
-
-        // Allocate a new AIO for this send
-        nng_aio* send_aio;
-        nng_aio_alloc(&send_aio, nullptr, nullptr);
-        nng_aio_set_msg(send_aio, new_msg);
-        nng_ctx_send(wrk->ctx, send_aio);
-        nng_msg_free(new_msg);
-        nng_aio_free(send_aio);
     }
 
     void handle_create_collection(json& req, json& resp) {
@@ -377,7 +379,27 @@ private:
             resp["message"] = std::string("Exception: ") + e.what();
         }
     }
-    void handle_read_document(json& req, json& resp, struct work* wrk, std::string& response_topic) {
+
+    void send_response(std::string& payload, Work* work, std::string& response_topic) {
+        nng_msg* out_msg;
+        nng_mqtt_msg_alloc(&out_msg, 0);
+
+        nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
+        nng_mqtt_msg_set_publish_topic(out_msg, response_topic.c_str());
+        nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)payload.data(), payload.size());
+
+        nng_aio* aio;
+        nng_aio_alloc(&aio, nullptr, nullptr);  // callback owns and frees it
+        nng_aio_set_msg(aio, out_msg);
+        nng_ctx_send(work->ctx, aio);  // send message
+
+        //wait for document to send
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        nng_msg_free(out_msg);
+        nng_aio_free(aio);
+    }
+
+    void handle_read_document(json& req, json& resp, Work* work, std::string& response_topic) {
         try {
             std::string collectionName = req["collection_name"];
             if (db_) {
@@ -404,29 +426,29 @@ private:
 						resp["message"] = status.message();
 						return;
 					}
-					send_response(doc.data().dump(), wrk, response_topic);
+                    resp = doc.data();
 					return;
 				}
 				else {
-					uint32_t limit = UINT32_MAX;
-					if (req.contains("limit")) {
-						limit = req["limit"];
-					}
-					auto cursor = coll->createCursor();
-					uint64_t cnt = 0;
-					while (cursor->isValid() && cnt < limit) {
-						Document doc;
-						Status status = cursor->current(&doc);
+                    uint32_t limit = UINT32_MAX;
+                    if (req.contains("limit")) {
+                        limit = req["limit"];
+                    }
+                    auto cursor = coll->createCursor();
+                    uint64_t cnt = 0;
+                    while (cursor->isValid() && cnt < limit) {
+                        Document doc;
+                        Status status = cursor->current(&doc);
 
-						if (status.ok()) {
-							send_response(doc.data().dump(), wrk, response_topic);
-						}
-						else {
-							std::cerr << "Error reading document: " << status.message() << std::endl;
-						}
-						cnt++;
-						cursor->next();
-					}
+                        if (status.ok()) {
+                            send_response(doc.data().dump(), work, response_topic);
+                        }
+                        else {
+                            std::cerr << "Error reading document: " << status.message() << std::endl;
+                        }
+                        cnt++;
+                        cursor->next();
+                    }
 				}
 			}
         }
@@ -471,10 +493,10 @@ private:
         }
     }
 
-    void handle_request(struct work* wrk,const std::string& topic, const std::string& payload) {
+    std::string handle_request(struct Work* wrk,const std::string& topic, const std::string& payload, Work* work) {
         //std::lock_guard<std::mutex> lock(mtx);
         json req, resp;
-        struct work* w = wrk;
+        Work* w = wrk;
         std::string response_topic = ANUDB_RESPONSE_TOPIC;
         try {
             req = json::parse(payload);
@@ -483,22 +505,18 @@ private:
             response_topic += req_id;
             if (cmd == "create_collection") {
                 handle_create_collection(req, resp);
-                send_response(resp.dump(), w, response_topic);
             }
             else if (cmd == "delete_collection") {
                 handle_delete_collection(req, resp);
-                send_response(resp.dump(), w, response_topic);
             }
             else if (cmd == "create_document") {
                 handle_create_document(req, resp);
-                send_response(resp.dump(), w, response_topic);
-            }
-            else if (cmd == "read_document") {
-                handle_read_document(req, resp, w, response_topic);
             }
             else if (cmd == "delete_document") {
                 handle_delete_document(req, resp);
-                send_response(resp.dump(), w, response_topic);
+            }
+            else if (cmd == "read_document") {
+                handle_read_document(req, resp, work, response_topic);
             }
 #if 0
             else if (cmd == "create_index") {
@@ -511,15 +529,13 @@ private:
             else {
                 resp["status"] = "error";
                 resp["message"] = "Unknown command: " + cmd;
-                send_response(resp.dump(), w, response_topic);
             }
         }
         catch (const std::exception& e) {
             resp["status"] = "error";
             resp["message"] = std::string("Exception: ") + e.what();
-            send_response(resp.dump(), w, response_topic);
         }
-        return;
+        return resp.dump();
     }
 
     std::string broker_url_;
@@ -527,7 +543,7 @@ private:
     nng_socket client_;
     Database* db_;
     bool running_;
-    std::vector<work*> workers_;
+    std::vector<Work*> workers_;
     std::mutex mtx;
     std::unordered_map<std::string, Collection*> collMap_;
 };
@@ -540,11 +556,11 @@ void signal_handler(int sig) {
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " <broker_url> <database_name>" << std::endl;
-        return 1;
+        //return 1;
     }
 
-    std::string broker_url = argv[1];
-    std::string db_name = argv[2];
+    std::string broker_url = "mqtt-tcp://127.0.0.1:1883";
+    std::string db_name = "AnuDB";
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
