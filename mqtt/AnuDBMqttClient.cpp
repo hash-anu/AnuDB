@@ -142,7 +142,6 @@ public:
                     nng_ctx_recv(work->ctx, work->aio);
                     break;
                 }
-                std::cout << "Sending response to this topic:" << *(work->requestid) << std::endl;
                 nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
                 nng_mqtt_msg_set_publish_topic(out_msg, (*(work->requestid)).c_str());
                 nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)work->reply->c_str(), work->reply->length());
@@ -443,7 +442,8 @@ private:
                         Status status = cursor->current(&doc);
 
                         if (status.ok()) {
-                            send_response(doc.data().dump(), work, response_topic);
+                            std::string tmp = (std::string)doc.data().dump();
+                            send_response(tmp, work, response_topic);
                         }
                         else {
                             std::cerr << "Error reading document: " << status.message() << std::endl;
@@ -584,7 +584,8 @@ private:
                     Document doc;
                     Status status = coll->readDocument(docId, doc);
                     if (status.ok()) {
-                        send_response(doc.data().dump(), work, response_topic);
+                        std::string tmp = (std::string)doc.data().dump();
+                        send_response(tmp, work, response_topic);
                         //std::cout << doc.data().dump() << std::endl;
                     }
                     else {
