@@ -55,7 +55,7 @@ public:
         nng_msg* msg = nullptr;
         nng_ctx ctx;
         AnuDBMqttClient* client;  // Pointer to client instance
-
+        std::string* requestid;
         std::string* reply;
         ~Work() {
         }
@@ -106,7 +106,7 @@ public:
             std::cout << "RECV: '" << std::string(reinterpret_cast<char*>(payload), payload_len)
                 << "' FROM: '" << std::string(recv_topic, topic_len) << "'" << std::endl; 
             
-            std::string ret = work->client->handle_request(work, topic, payload_str, work);
+            std::string ret = work->client->handle_request(work, topic, payload_str);
             if (ret != "") {
                 work->reply = new std::string(ret);
             }
@@ -142,13 +142,16 @@ public:
                     nng_ctx_recv(work->ctx, work->aio);
                     break;
                 }
-
+                std::cout << "Sending response to this topic:" << *(work->requestid) << std::endl;
                 nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
-                nng_mqtt_msg_set_publish_topic(out_msg, ANUDB_RESPONSE_TOPIC);
+                nng_mqtt_msg_set_publish_topic(out_msg, (*(work->requestid)).c_str());
                 nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)work->reply->c_str(), work->reply->length());
                 nng_aio_set_msg(work->aio, out_msg);
+                std::cout << "Sending response to this topic:" << *(work->requestid) << std::endl;
                 delete work->reply;
                 work->reply = NULL;
+                delete work->requestid;
+                work->requestid = NULL;
                 nng_ctx_send(work->ctx, work->aio);
             }
             else {
@@ -345,14 +348,13 @@ private:
             std::string collectionName = req["collection_name"];
             if (db_) {
                 if (collMap_.count(collectionName) == 0) {
-                    resp["status"] = "error";
-                    resp["message"] = "Collection :" + collectionName + " is not found";
-
                     Collection* coll = db_->getCollection(collectionName);
                     if (coll != NULL) {
                         collMap_[collectionName] = coll;
                     }
                     else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
                         return;
                     }
                 }
@@ -404,14 +406,14 @@ private:
             std::string collectionName = req["collection_name"];
             if (db_) {
                 if (collMap_.count(collectionName) == 0) {
-                    resp["status"] = "error";
-                    resp["message"] = "Collection :" + collectionName + " is not found";
-
+                    
                     Collection* coll = db_->getCollection(collectionName);
                     if (coll != NULL) {
                         collMap_[collectionName] = coll;
                     }
                     else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
                         return;
                     }
                 }
@@ -462,13 +464,13 @@ private:
             std::string collectionName = req["collection_name"];
             if (db_) {
                 if (collMap_.count(collectionName) == 0) {
-                    resp["status"] = "error";
-                    resp["message"] = "Collection :" + collectionName + " is not found";
                     Collection* coll = db_->getCollection(collectionName);
                     if (coll != NULL) {
                         collMap_[collectionName] = coll;
                     }
                     else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
                         return;
                     }
                 }
@@ -484,6 +486,110 @@ private:
                     resp["status"] = "success";
                     resp["docId"] = docId;
                     resp["message"] = "Document deleted from collection " + collectionName;
+				}
+			}
+		}
+		catch (const std::exception& e) {
+			resp["status"] = "error";
+			resp["message"] = std::string("Exception: ") + e.what();
+		}
+	}
+
+	void handle_create_index(json& req, json& resp) {
+		try {
+			std::string collectionName = req["collection_name"];
+			if (db_) {
+				if (collMap_.count(collectionName) == 0) {
+					Collection* coll = db_->getCollection(collectionName);
+					if (coll != NULL) {
+						collMap_[collectionName] = coll;
+					}
+					else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
+						return;
+					}
+				}
+				Collection* coll = collMap_[collectionName];
+				std::string field = req["field"];;
+				Status status = coll->createIndex(field);
+				if (!status.ok()) {
+					resp["status"] = "error while creating index in collection " + collectionName;
+					resp["message"] = status.message();
+					return;
+				}
+				resp["status"] = "success";
+				resp["message"] = "Index created on field name: " + field;
+			}
+		}
+		catch (const std::exception& e) {
+			resp["status"] = "error";
+			resp["message"] = std::string("Exception: ") + e.what();
+		}
+	}
+    void handle_delete_index(json& req, json& resp) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                if (collMap_.count(collectionName) == 0) {
+                    Collection* coll = db_->getCollection(collectionName);
+                    if (coll != NULL) {
+                        collMap_[collectionName] = coll;
+                    }
+                    else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
+                        return;
+                    }
+                }
+                Collection* coll = collMap_[collectionName];
+                std::string field = req["field"];
+                Status status = coll->createIndex(field);
+                if (!status.ok()) {
+                    resp["status"] = "error while deleting index in collection " + collectionName;
+                    resp["message"] = status.message();
+                    return;
+                }
+                resp["status"] = "success";
+                resp["message"] = "Index deleted on field name: " + field;
+            }
+        }
+        catch (const std::exception& e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+        }
+    }
+    void handle_find_documents(json& req, json& resp, Work* work, std::string& response_topic) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                if (collMap_.count(collectionName) == 0) {
+                    Collection* coll = db_->getCollection(collectionName);
+                    if (coll != NULL) {
+                        collMap_[collectionName] = coll;
+                    }
+                    else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
+                        return;
+                    }
+                }
+                std::string requestId = req["request_id"];
+                json query = req["query"];
+                Collection* coll = collMap_[collectionName];
+                std::vector<std::string> docIds;
+                docIds = coll->findDocument(query);
+
+                for (const std::string& docId : docIds) {
+                    Document doc;
+                    Status status = coll->readDocument(docId, doc);
+                    if (status.ok()) {
+                        send_response(doc.data().dump(), work, response_topic);
+                        //std::cout << doc.data().dump() << std::endl;
+                    }
+                    else {
+                        std::cerr << "Failed to read document " << docId << ": " << status.message() << std::endl;
+                    }
                 }
             }
         }
@@ -493,16 +599,19 @@ private:
         }
     }
 
-    std::string handle_request(struct Work* wrk,const std::string& topic, const std::string& payload, Work* work) {
+    std::string handle_request(struct Work* wrk,const std::string& topic, const std::string& payload) {
         //std::lock_guard<std::mutex> lock(mtx);
         json req, resp;
         Work* w = wrk;
         std::string response_topic = ANUDB_RESPONSE_TOPIC;
+        wrk->requestid = new std::string(response_topic);
         try {
             req = json::parse(payload);
             std::string cmd = req["command"];
             std::string req_id = req["request_id"];
             response_topic += req_id;
+            delete wrk->requestid;
+            wrk->requestid = new std::string(response_topic);
             if (cmd == "create_collection") {
                 handle_create_collection(req, resp);
             }
@@ -516,16 +625,19 @@ private:
                 handle_delete_document(req, resp);
             }
             else if (cmd == "read_document") {
-                handle_read_document(req, resp, work, response_topic);
+                handle_read_document(req, resp, wrk, response_topic);
+                resp["status"] = "success";
             }
-#if 0
             else if (cmd == "create_index") {
                 handle_create_index(req, resp);
             }
             else if (cmd == "delete_index") {
                 handle_delete_index(req, resp);
             }
-#endif
+            else if (cmd == "find_documents") {
+                handle_find_documents(req, resp, wrk, response_topic);
+                resp["status"] = "success";
+            }
             else {
                 resp["status"] = "error";
                 resp["message"] = "Unknown command: " + cmd;
@@ -533,7 +645,7 @@ private:
         }
         catch (const std::exception& e) {
             resp["status"] = "error";
-            resp["message"] = std::string("Exception: ") + e.what();
+            resp["message"] = std::string("Exception :") + e.what();
         }
         return resp.dump();
     }
