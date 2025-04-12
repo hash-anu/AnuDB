@@ -158,6 +158,7 @@ namespace anudb {
 			table_options.format_version = 5;
 
 			//Set prefix extractor - THE most important option for prefix searches
+			options.memtable_factory.reset(rocksdb::NewHashSkipListRepFactory());
 			options.prefix_extractor.reset(rocksdb::NewFixedPrefixTransform(config.prefix_length));
 
 			// Partition filters (better memory usage)
