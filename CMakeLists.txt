@@ -97,6 +97,6 @@ set(ENABLE_ACME OFF CACHE BOOL "Disable ACME protocol" FORCE)
 # Use lightweight TLS if available
 set(ENABLE_MBEDTLS ON CACHE BOOL "Use mbedTLS instead of OpenSSL" FORCE)
 set(ENABLE_OPENSSL OFF CACHE BOOL "Disable OpenSSL" FORCE)
-
+include_directories(${CMAKE_SOURCE_DIR}/third_party/nanomq/nanomq/include)
 # Add mqtt file
 add_subdirectory(mqtt)
