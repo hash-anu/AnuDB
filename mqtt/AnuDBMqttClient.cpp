@@ -342,6 +342,7 @@ private:
             resp["message"] = std::string("Exception: ") + e.what();
         }
     }
+
     void handle_create_document(json& req, json& resp) {
         try {
             std::string collectionName = req["collection_name"];
@@ -399,7 +400,47 @@ private:
         nng_msg_free(out_msg);
         nng_aio_free(aio);
     }
+    void handle_get_collections(json& req, json& resp) {
+        if (db_) {
+            std::string collections = "";
+            for (std::string& name : db_->getCollectionNames()) {
+                collections += (name + ",");
+            }
+            resp["Collections"] = collections;
+        }
+	}
+	void handle_get_indexes(json& req, json& resp) {
+		try {
+			std::string collectionName = req["collection_name"];
+			if (db_) {
+				if (collMap_.count(collectionName) == 0) {
 
+					Collection* coll = db_->getCollection(collectionName);
+					if (coll != NULL) {
+						collMap_[collectionName] = coll;
+					}
+					else {
+						resp["status"] = "error";
+						resp["message"] = "Collection :" + collectionName + " is not found";
+						return;
+					}
+				}
+				Collection* coll = collMap_[collectionName];
+				std::vector<std::string> indexes;
+				Status status = coll->getIndex(indexes);
+				std::string indexList = "";
+				for (std::string& name : indexes) {
+					indexList += (name + ",");
+				}
+				resp["collection"] = collectionName;
+				resp["indexList"] = indexList;
+			}
+		}
+		catch (const std::exception& e) {
+			resp["status"] = "error";
+			resp["message"] = std::string("Exception: ") + e.what();
+		}
+	}
     void handle_read_document(json& req, json& resp, Work* work, std::string& response_topic) {
         try {
             std::string collectionName = req["collection_name"];
@@ -601,7 +642,6 @@ private:
     }
 
     std::string handle_request(struct Work* wrk,const std::string& topic, const std::string& payload) {
-        //std::lock_guard<std::mutex> lock(mtx);
         json req, resp;
         Work* w = wrk;
         std::string response_topic = ANUDB_RESPONSE_TOPIC;
@@ -619,6 +659,9 @@ private:
             else if (cmd == "delete_collection") {
                 handle_delete_collection(req, resp);
             }
+            else if (cmd == "get_collections") {
+                handle_get_collections(req, resp);
+            }
             else if (cmd == "create_document") {
                 handle_create_document(req, resp);
             }
@@ -634,6 +677,9 @@ private:
             }
             else if (cmd == "delete_index") {
                 handle_delete_index(req, resp);
+            }
+            else if (cmd == "get_indexes") {
+                handle_get_indexes(req, resp);
             }
             else if (cmd == "find_documents") {
                 handle_find_documents(req, resp, wrk, response_topic);
