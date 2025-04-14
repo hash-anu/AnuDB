@@ -715,11 +715,11 @@ void signal_handler(int sig) {
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: " << argv[0] << " <broker_url> <database_name>" << std::endl;
-        //return 1;
+        return 1;
     }
 
-    std::string broker_url = "mqtt-tcp://127.0.0.1:1883";
-    std::string db_name = "AnuDB";
+    std::string broker_url = argv[1];
+    std::string db_name = argv[2];
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
