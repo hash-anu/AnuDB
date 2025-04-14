@@ -4,6 +4,7 @@ using namespace anudb;
 
 // Create a document in the collection
 Status  Collection::createDocument(Document& doc) {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	// Check if document has an ID, if not generate one
 	if (doc.id().empty()) {
 		doc.setId(generateId());
@@ -28,6 +29,7 @@ Status  Collection::createDocument(Document& doc) {
 }
 
 Status Collection::deleteDocument(const std::string& id) {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	Document doc;
 	Status status = readDocument(id, doc);
 	if (!status.ok()) {
@@ -59,6 +61,7 @@ Status Collection::getIndex(std::vector<std::string>& indexList) const {
 }
 
 Status Collection::createIndex(const std::string& index) {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	Status status = engine_->createCollection(getIndexCfName(index));
 	try {
 		auto cursor = createCursor();
@@ -91,11 +94,13 @@ Status Collection::createIndex(const std::string& index) {
 
 // Remove an index
 Status Collection::deleteIndex(const std::string& index) {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	return engine_->dropCollection(getIndexCfName(index));
 }
 
 // Read a document from the collection
 Status Collection::readDocument(const std::string& id, Document& doc) {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	std::vector<uint8_t> serialized;
 	Status status = engine_->get(name_, id, &serialized);
 
@@ -113,11 +118,13 @@ Status Collection::readDocument(const std::string& id, Document& doc) {
 }
 
 std::unique_ptr<Cursor> Collection::createCursor() {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	return std::make_unique<Cursor>(name_, engine_);
 }
 
 // Read all documents from the collection
 Status Collection::readAllDocuments(std::vector<Document>& docIds, uint64_t limit) {
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	auto cursor = createCursor();
 	uint64_t cnt = 0;
 	try {
@@ -281,7 +288,7 @@ Status Collection::findDocumentsUsingGt(const json& gtOps, std::set<std::string>
 }
 
 std::vector<std::string> Collection::findDocument(const json& filterOption) {
-	std::lock_guard<std::mutex> lock(mutex_);
+	std::lock_guard<std::mutex> lock(collection_mutex_);
 	std::vector<std::string> docIds;
 	Status status;
 	std::set<std::string> indexes = engine_->getIndexNames(name_);
