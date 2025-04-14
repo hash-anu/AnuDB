@@ -88,6 +88,7 @@ namespace anudb {
 		std::string encodeDoubleKey(double value);
 		double decodeDoubleKey(const std::string& encoded);
 		std::mutex collection_mutex_;
+		std::mutex mutex_;
 	};
 
 	// For threaded implementation
