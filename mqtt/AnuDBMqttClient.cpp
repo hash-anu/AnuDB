@@ -154,11 +154,6 @@ public:
                 nng_ctx_send(work->ctx, work->aio);
             }
             else {
-                if (work->reply != NULL) {
-                    delete work->reply;
-                    work->reply = NULL;
-                }
-
                 work->state = Work::State::RECV;
                 nng_ctx_recv(work->ctx, work->aio);
             }
