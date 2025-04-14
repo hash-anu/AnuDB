@@ -4,6 +4,12 @@
 #include "StorageEngine.h"
 #include "Document.h"
 #include "Cursor.h"
+#ifdef _WIN32
+#include <process.h>
+#pragma comment(lib, "ws2_32.lib")
+extern "C" uintptr_t __cdecl _beginthreadex(void*, unsigned int,
+	unsigned int(__stdcall*)(void*), void*, unsigned int, unsigned int*);
+#endif
 #ifdef MAKE_UNIQUE
 #include <memory>
 
