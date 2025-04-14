@@ -122,7 +122,7 @@ public:
             work->msg = nullptr;
 
             work->state = Work::State::SEND;
-            client_cb(work);
+            nng_sleep_aio(0, work->aio);  // schedule next step
             break;
         }
 
