@@ -383,6 +383,7 @@ private:
     }
 
     void send_response(std::string& payload, Work* work, std::string& response_topic) {
+        std::lock_guard<std::mutex> lock(mtx_);
         nng_msg* out_msg;
         nng_mqtt_msg_alloc(&out_msg, 0);
 
@@ -703,7 +704,7 @@ private:
     Database* db_;
     bool running_;
     std::vector<Work*> workers_;
-    std::mutex mtx;
+    std::mutex mtx_;
     std::unordered_map<std::string, Collection*> collMap_;
 };
 
