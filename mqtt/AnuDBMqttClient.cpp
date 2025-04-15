@@ -35,8 +35,10 @@ using json = nlohmann::json;
 
 class AnuDBMqttClient {
 public:
-    AnuDBMqttClient(const std::string& broker_url, const std::string& client_id, Database* db)
-        : broker_url_(broker_url), client_id_(client_id), db_(db), running_(false) {}
+    AnuDBMqttClient(const std::string& broker_url, const std::string& client_id, Database* db, const std::string& user_name, 
+                    const std::string& passwd)
+        : broker_url_(broker_url), client_id_(client_id), db_(db), running_(false), user_name_(user_name), pswd_(passwd)
+    {}
 
     ~AnuDBMqttClient() {
         stop();
@@ -208,6 +210,20 @@ public:
         if ((rv = nng_mqtt_client_open(&client_)) != 0) {
             std::cerr << "nng_socket: " << nng_strerror(rv) << std::endl;
             return false;
+        }
+
+        if (user_name_ != "" && pswd_ != "") {
+            // Set the username
+            if ((rv = nng_socket_set_string(client_, NNG_OPT_MQTT_USERNAME, user_name_.c_str())) != 0) {
+                fprintf(stderr, "Failed to set username: %s\n", nng_strerror(rv));
+                return 1;
+            }
+
+            // Set the password
+            if ((rv = nng_socket_set_string(client_, NNG_OPT_MQTT_PASSWORD, pswd_.c_str())) != 0) {
+                fprintf(stderr, "Failed to set password: %s\n", nng_strerror(rv));
+                return 1;
+            }
         }
 
         for (int i = 0; i < CONCURRENT_THREADS; i++) {
@@ -689,6 +705,8 @@ private:
     }
 
     std::string broker_url_;
+    std::string user_name_;
+    std::string pswd_;
     std::string client_id_;
     nng_socket client_;
     Database* db_;
@@ -704,13 +722,15 @@ void signal_handler(int sig) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cerr << "Usage: " << argv[0] << " <broker_url> <database_name>" << std::endl;
+    if (argc < 5) {
+        std::cerr << "Usage: " << argv[0] << " <broker_url> <database_name> <username> <password>" << std::endl;
         return 1;
     }
 
     std::string broker_url = argv[1];
     std::string db_name = argv[2];
+    std::string user_name = argv[3];
+    std::string passwd = argv[4];
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
@@ -719,7 +739,7 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<Database> db = std::make_unique<Database>(db_name);
         std::string client_id = "anudb_mqtt_server_" + std::to_string(time(nullptr));
 
-        AnuDBMqttClient mqtt_client(broker_url, client_id, db.get());
+        AnuDBMqttClient mqtt_client(broker_url, client_id, db.get(), user_name, passwd);
         if (!mqtt_client.start()) {
             std::cerr << "Failed to start MQTT client" << std::endl;
             return 1;
