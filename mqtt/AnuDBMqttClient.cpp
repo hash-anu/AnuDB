@@ -212,20 +212,6 @@ public:
             return false;
         }
 
-        if (user_name_ != "" && pswd_ != "") {
-            // Set the username
-            if ((rv = nng_socket_set_string(client_, NNG_OPT_MQTT_USERNAME, user_name_.c_str())) != 0) {
-                fprintf(stderr, "Failed to set username: %s\n", nng_strerror(rv));
-                return 1;
-            }
-
-            // Set the password
-            if ((rv = nng_socket_set_string(client_, NNG_OPT_MQTT_PASSWORD, pswd_.c_str())) != 0) {
-                fprintf(stderr, "Failed to set password: %s\n", nng_strerror(rv));
-                return 1;
-            }
-        }
-
         for (int i = 0; i < CONCURRENT_THREADS; i++) {
             works[i] = alloc_work();
         }
@@ -237,6 +223,12 @@ public:
         nng_mqtt_msg_set_connect_clean_session(msg, false);
         nng_mqtt_msg_set_connect_proto_version(msg, MQTT_PROTOCOL_VERSION_v311);
         nng_mqtt_set_connect_cb(client_, connect_cb, &client_);
+        if (user_name_ != "" && pswd_ != "") {
+            // Set the username
+            nng_mqtt_msg_set_connect_user_name(msg, user_name_.c_str());
+            // Set the password
+            nng_mqtt_msg_set_connect_password(msg, pswd_.c_str());
+        }
 
         if ((rv = nng_dialer_create(&dialer, client_, broker_url_.c_str())) != 0) {
             std::cerr << "Failed to create dialer: " << nng_strerror(rv) << std::endl;
