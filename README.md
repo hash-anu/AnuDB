@@ -36,19 +36,19 @@ Below commands will generate AnuDB.exe bin which executes all operations support
 
 # Clone the repository
 git clone https://github.com/hash-anu/AnuDB.git
-cd AnuDB
-
-# Create build directory
-mkdir build && cd build
-
-# Configure with CMake (basic)
+cd AnuDB/third_party/nanomq/
+git submodule update --init --recursive
+cd ../..
+mkdir build
+cd build
 cmake ..
+make
 
+or
 # Configure with ZSTD compression support
 cmake -DZSTD_INCLUDE_DIR=/path/to/zstd/include -DZSTD_LIB_DIR=/path/to/zstd/lib ..
-
-# Build
 make
+
 ```
 
 ### Embedded Platform Build
