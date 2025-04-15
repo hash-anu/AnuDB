@@ -80,3 +80,23 @@ add_executable(AnuDB ${CMAKE_SOURCE_DIR}/src/main.cpp)
 target_link_libraries(AnuDB libanu)
 
 add_subdirectory(examples)
+
+
+# Force static library build for resource efficiency
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+
+# Essential security options
+set(ENABLE_TLS ON CACHE BOOL "Enable TLS support" FORCE)
+set(ENABLE_ACL ON CACHE BOOL "Enable basic access control" FORCE)
+
+# Disable features that consume excessive resources
+set(ENABLE_RULE_ENGINE OFF CACHE BOOL "Disable rule engine to save resources" FORCE)
+set(ENABLE_PROMETHEUS OFF CACHE BOOL "Disable metrics for resource saving" FORCE)
+set(ENABLE_ACME OFF CACHE BOOL "Disable ACME protocol" FORCE)
+
+# Use lightweight TLS if available
+set(ENABLE_MBEDTLS ON CACHE BOOL "Use mbedTLS instead of OpenSSL" FORCE)
+set(ENABLE_OPENSSL OFF CACHE BOOL "Disable OpenSSL" FORCE)
+include_directories(${CMAKE_SOURCE_DIR}/third_party/nanomq/nanomq/include)
+# Add mqtt file
+add_subdirectory(mqtt)

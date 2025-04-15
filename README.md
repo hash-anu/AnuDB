@@ -2,9 +2,7 @@
 
 AnuDB is a lightweight, serverless document database designed for C++ applications, offering efficient storage of JSON documents through MessagePack serialization. It provides a serverless, schema-less solution for applications requiring flexible data management with robust query capabilities.
 
-As part of this repository, we have included a **stress test** that ingests **100,000 documents across 8 concurrent threads**. We encourage you to run this stress test on your platform and evaluate the ingestion/read/query performance. Your feedback on execution time and system behavior would be invaluable in further optimizing AnuDB’s performance. 
-
-In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [StorageEngine.cpp](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.cpp)  and [StorageEngine.h](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.h). Based on these configurations, you can get your desired performance results tailored to your specific platform requirements.
+You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [StorageEngine.cpp](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.cpp)  and [StorageEngine.h](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.h). Based on these configurations, you can get your desired performance results tailored to your specific platform requirements.
 
 ## Features
 
@@ -18,15 +16,18 @@ In addition to that, you can adjust memory/CPU usage of AnuDB based on RocksDB o
 - **Flexible Querying**: Support for equality, comparison, logical operators and sorting
 - **Indexing**: Create indexes to speed up queries on frequently accessed fields
 - **Update Operations**: Rich set of document modification operations
-- **Import/Export**: Easy JSON import and export for data migration.Exported JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
-- **C++11 Compatible**: Designed to support a wide range of embedded devices efficiently.
+- **Import/Export**: Easy JSON import and export for data migration. Exported JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
+- **C++11 Compatible**: Designed to support a wide range of embedded devices efficiently
 - **Windows/Linux Support**: Designed for Windows/Linux environments and embedded Linux platforms
+- **MQTT Interface**: Connect and operate via MQTT protocol from various platforms
+- **High Concurrency**: Supports 32 concurrent nng worker threads for handling MQTT requests
 
 ## Prerequisites
 
 - C++11 >= compatible compiler
 - CMake 3.10 or higher
 - ZSTD development libraries (optional, for compression support)
+- Mosquitto MQTT broker (for MQTT interface)
 
 ## Building from Source
 There is no need to install any other third party libraries.
@@ -36,19 +37,19 @@ Below commands will generate AnuDB.exe bin which executes all operations support
 
 # Clone the repository
 git clone https://github.com/hash-anu/AnuDB.git
-cd AnuDB
-
-# Create build directory
-mkdir build && cd build
-
-# Configure with CMake (basic)
+cd AnuDB/third_party/nanomq/
+git submodule update --init --recursive
+cd ../..
+mkdir build
+cd build
 cmake ..
+make
 
+or
 # Configure with ZSTD compression support
 cmake -DZSTD_INCLUDE_DIR=/path/to/zstd/include -DZSTD_LIB_DIR=/path/to/zstd/lib ..
-
-# Build
 make
+
 ```
 
 ### Embedded Platform Build
@@ -112,6 +113,156 @@ int main() {
 [Sample for get list of collections](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBCreateGetDropCollections.cpp)
 
 [Sample for Export then Import operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBExportThenImport.cpp)
+
+## MQTT Interface
+
+AnuDB now supports interaction via MQTT protocol, allowing you to connect and operate the database from various platforms without direct C++ integration. The implementation uses nlohmann::json for JSON handling.
+
+In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using client.bash script, ran all supported MQTT commands
+
+![AnuDBMqttDemo](demo.gif)
+
+### High-Performance MQTT Worker Architecture
+
+AnuDB implements a high-performance concurrent worker architecture to handle MQTT requests efficiently:
+
+- **32 Concurrent Worker Threads**: The MQTT bridge spawns 32 nng (nanomsg-next-generation) worker threads to process incoming requests in parallel
+- **Load Balancing**: Requests are automatically distributed across all worker threads for optimal performance
+- **Thread Safety**: All database operations are thread-safe, enabling true concurrent processing
+- **Asynchronous Processing**: Each worker operates independently, preventing slow operations from blocking the entire system
+- **Scalable Design**: The worker architecture scales efficiently on multi-core systems
+
+#### Worker Thread Architecture Diagram
+
+```
+                           ┌─────────────────┐
+                           │  MQTT Broker    │
+                           │  (Mosquitto)    │
+                           └────────┬────────┘
+                                    │
+                                    ▼
+                           ┌─────────────────┐
+                           │  MQTT Bridge    │
+                           │   Connector     │
+                           └────────┬────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │     Message Dispatcher        │
+                    └───┬───────┬───────┬───────┬───┘
+          ┌─────────────┘       │       │       └─────────────┐
+          │                     │       │                     │
+┌─────────▼───────┐   ┌─────────▼───┐   ▲           ┌─────────▼───────┐
+│  nng Workers    │   │  nng Workers │   │           │  nng Workers    │
+│ (Threads 1-8)   │   │ (Threads 9-16)│   │           │ (Threads 25-32) │
+└─────────────────┘   └─────────────┘    │           └─────────────────┘
+                                     ┌───┴───────┐
+                                     │nng Workers│
+                                     │(17-24)    │
+                                     └───────────┘
+                                          │
+                                          ▼
+                                  ┌─────────────────┐
+                                  │    AnuDB        │
+                                  │   Core Engine   │
+                                  └─────────────────┘
+```
+
+### Setting Up MQTT Interface
+
+1. Install and start Mosquitto MQTT broker:
+   ```bash
+   # On Ubuntu/Debian
+   sudo apt-get install mosquitto mosquitto-clients
+   sudo systemctl start mosquitto
+   
+   # On Windows
+   # Download and install from https://mosquitto.org/download/
+   # Start the service via Windows Services
+   ```
+
+2. Run the AnuDB MQTT service (after building the project):
+   ```bash
+   # Start the AnuDB MQTT service using AnuDBMqttBridge
+   ./AnuDBMqttBridge mqtt-tcp://127.0.0.1:1883 AnuDB "" ""
+   ```
+
+   Usage of AnuDBMqttBridge:
+   ```
+   Usage: ./AnuDBMqttBridge <broker_url> <database_name> <mqtt-username> <mqtt-password>
+   ```
+   Note: All fields are mandatory when using the MQTT bridge.
+### Using the MQTT Client Scripts
+
+We provide client scripts for both Linux (client.bash) and Windows (client.ps1) environments to interact with AnuDB via MQTT:
+
+```bash
+# Basic usage
+./client.bash
+
+# Run load test
+./client.bash --load-test --threads 16 --operations 1000
+
+```
+
+### Supported MQTT Commands
+
+The following commands are supported through the MQTT interface:
+
+#### Collection Management
+
+| Command | Description | Example Payload |
+|---------|-------------|----------------|
+| `create_collection` | Creates a new collection | `{"command":"create_collection","collection_name":"users","request_id":"req123"}` |
+| `delete_collection` | Deletes an existing collection | `{"command":"delete_collection","collection_name":"users","request_id":"req123"}` |
+| `get_collections` | Lists all collections | `{"command":"get_collections","request_id":"req123"}` |
+
+#### Document Operations
+
+| Command | Description | Example Payload |
+|---------|-------------|----------------|
+| `create_document` | Creates a new document (also used for updates) | `{"command":"create_document","collection_name":"users","document_id":"user001","content":{"name":"John","age":30},"request_id":"req123"}` |
+| `read_document` | Reads a document by ID | `{"command":"read_document","collection_name":"users","document_id":"user001","request_id":"req123"}` |
+| `delete_document` | Deletes a document | `{"command":"delete_document","collection_name":"users","document_id":"user001","request_id":"req123"}` |
+
+Note: To update a document, use the `create_document` command with an existing document ID. This will overwrite the previous document with the new content.
+
+#### Index Operations
+
+| Command | Description | Example Payload |
+|---------|-------------|----------------|
+| `create_index` | Creates an index on a field | `{"command":"create_index","collection_name":"users","field":"age","request_id":"req123"}` |
+| `delete_index` | Deletes an index | `{"command":"delete_index","collection_name":"users","field":"age","request_id":"req123"}` |
+| `get_indexes` | Lists all indexes for a collection | `{"command":"get_indexes","collection_name":"users","request_id":"req123"}` |
+
+#### Query Operations
+
+| Command | Description | Example Payload |
+|---------|-------------|----------------|
+| `find_documents` | Finds documents matching a query | `{"command":"find_documents","collection_name":"users","query":{"$eq":{"age":30}},"request_id":"req123"}` |
+
+#### Query Operators
+
+The `find_documents` command supports the following query operators:
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `$eq` | Equality match | `{"$eq":{"field":"value"}}` |
+| `$gt` | Greater than | `{"$gt":{"field":value}}` |
+| `$lt` | Less than | `{"$lt":{"field":value}}` |
+| `$and` | Logical AND | `{"$and":[{"$eq":{"field":"value"}},{"$gt":{"field":value}}]}` |
+| `$or` | Logical OR | `{"$or":[{"$eq":{"field":"value"}},{"$gt":{"field":value}}]}` |
+| `$orderBy` | Sort results | `{"$orderBy":{"field":"asc"}}` |
+
+### Client Script Features
+
+The provided client scripts offer several features:
+
+- Interactive demo mode showcasing all MQTT operations
+- Arbitrary command execution for testing specific commands
+- Load testing with configurable threads and operations
+- Detailed performance reporting
+- Comprehensive help with command-line options
 
 ## API Overview
 
@@ -266,6 +417,9 @@ products->updateDocument("prod001", pushOp);
 - Export/import operations for large collections can be intensive; plan accordingly
 - On embedded platforms, consider using the ZSTD compression to reduce storage requirements
 - Adjust memory budget and cache size based on your device capabilities
+- For MQTT operations, leverage the 32 concurrent worker threads for optimal throughput
+- Consider adjusting worker thread count for your specific hardware capabilities
+- For high-volume MQTT usage, ensure your broker is properly configured for the expected load
 
 ## Embedded Platform Optimizations
 
@@ -274,10 +428,11 @@ products->updateDocument("prod001", pushOp);
 - Low CPU overhead suitable for embedded processors
 - Minimal dependencies for smaller deployment size
 - Supports cross-compilation for various architectures
+- MQTT interface enables lightweight clients on resource-constrained devices
 
 ## Limitations
 
-- Embedded-only; no client-server architecture
+- Embedded-only; no client-server architecture (except via MQTT interface)
 - No built-in replication or sharding
 
 ## Acknowledgments
@@ -286,3 +441,5 @@ products->updateDocument("prod001", pushOp);
 - Uses [nlohmann/json](https://github.com/nlohmann/json) for JSON parsing
 - Uses [MessagePack](https://msgpack.org/) for serialization
 - Uses [ZSTD](https://github.com/facebook/zstd) for compression (optional)
+- Uses [NanoMQ](https://github.com/nanomq/nanomq) for MQTT communication
+- Uses [nng (nanomsg-next-generation)](https://github.com/nanomsg/nng) for worker thread architecture
