@@ -281,8 +281,6 @@ Status Collection::findDocumentsUsingGt(const json& gtOps, std::set<std::string>
 }
 
 std::vector<std::string> Collection::findDocument(const json& filterOption) {
-	std::mutex mutex;
-	std::lock_guard<std::mutex> lock(mutex);
 	std::vector<std::string> docIds;
 	Status status;
 	std::set<std::string> indexes = engine_->getIndexNames(name_);

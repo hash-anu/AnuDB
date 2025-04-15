@@ -8,8 +8,8 @@ Status StorageEngine::open() {
 	RocksDBOptimizer::EmbeddedConfig config;
 
 	// Adjust for your specific embedded system
-	config.write_buffer_size = 2 << 20;     // 2MB
-	config.block_cache_size = 4 << 20;      // 4MB
+	config.write_buffer_size = 512 * 1024;         // 512 KB per memtable
+	config.block_cache_size = 512 * 1024;         // 512 KB
 	config.enable_pipelined_write = true;   // 6.29.5 feature
 
 	options = RocksDBOptimizer::getOptimizedOptions(config);

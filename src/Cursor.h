@@ -33,6 +33,7 @@ namespace anudb {
         StorageEngine* engine_;
         std::unique_ptr<rocksdb::Iterator> iterator_;
         bool valid_;
+        mutable std::mutex cursor_mutex_;  // Ensures thread-safety
     };
 };
 
