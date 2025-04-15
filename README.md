@@ -196,17 +196,9 @@ We provide client scripts for both Linux (client.bash) and Windows (client.ps1) 
 # Basic usage
 ./client.bash
 
-# Specify a different broker
-./client.bash --broker 192.168.1.100 --port 1883
-
-# Create a custom collection
-./client.bash --collection my_collection
-
 # Run load test
-./client.bash --load-test --threads 16 --operations 200
+./client.bash --load-test --threads 16 --operations 1000
 
-# Execute a single command
-./client.bash --execute
 ```
 
 ### Supported MQTT Commands
