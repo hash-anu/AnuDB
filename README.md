@@ -118,7 +118,7 @@ int main() {
 
 AnuDB now supports interaction via MQTT protocol, allowing you to connect and operate the database from various platforms without direct C++ integration. The implementation uses nlohmann::json for JSON handling.
 
-In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using clien.bash script, ran all supported MQTT commands
+In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using client.bash script, ran all supported MQTT commands
 
 ![AnuDBMqttDemo](demo.gif)
 
