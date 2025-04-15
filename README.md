@@ -188,32 +188,6 @@ AnuDB implements a high-performance concurrent worker architecture to handle MQT
    Usage: ./AnuDBMqttBridge <broker_url> <database_name> <mqtt-username> <mqtt-password>
    ```
    Note: All fields are mandatory when using the MQTT bridge.
-
-### Performance Tuning MQTT Workers
-
-You can tune the MQTT worker performance for your specific use case:
-
-- Adjust worker thread count via the `NNG_WORKER_COUNT` environment variable (default: 32)  
-- Modify the worker queue depth with `NNG_QUEUE_DEPTH` (default: 128)
-- Set processing priorities with `NNG_WORKER_PRIORITY` (values: 1-99, default: 50)
-
-Example:
-```bash
-# Run with custom worker settings
-NNG_WORKER_COUNT=64 NNG_QUEUE_DEPTH=256 ./AnuDBMqttBridge mqtt-tcp://127.0.0.1:1883 AnuDB "" "" 
-```
-
-#### Performance Benchmarks
-
-| Worker Threads | Operations/sec | Latency (ms) | CPU Usage |
-|----------------|----------------|--------------|-----------|
-| 8              | ~2,500         | 12.4         | 20%       |
-| 16             | ~5,000         | 8.2          | 35%       |
-| 32 (default)   | ~9,800         | 4.6          | 65%       |
-| 64             | ~12,600        | 3.8          | 85%       |
-
-*Note: Benchmark performed on a 16-core system with SSD storage and 100 concurrent clients.*
-
 ### Using the MQTT Client Scripts
 
 We provide client scripts for both Linux (client.bash) and Windows (client.ps1) environments to interact with AnuDB via MQTT:
