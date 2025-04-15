@@ -385,16 +385,10 @@ private:
         nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
         nng_mqtt_msg_set_publish_topic(out_msg, response_topic.c_str());
         nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)payload.data(), payload.size());
-
-        nng_aio* aio;
-        nng_aio_alloc(&aio, nullptr, nullptr);  // callback owns and frees it
-        nng_aio_set_msg(aio, out_msg);
-        nng_ctx_send(work->ctx, aio);  // send message
+        nng_ctx_sendmsg(work->ctx, out_msg, !NNG_FLAG_NONBLOCK);  // send message
 
         //wait for document to send
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         nng_msg_free(out_msg);
-        nng_aio_free(aio);
     }
     void handle_get_collections(json& req, json& resp) {
         if (db_) {
