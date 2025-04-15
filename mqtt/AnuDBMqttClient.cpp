@@ -385,10 +385,10 @@ private:
         nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
         nng_mqtt_msg_set_publish_topic(out_msg, response_topic.c_str());
         nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)payload.data(), payload.size());
-        nng_ctx_sendmsg(work->ctx, out_msg, !NNG_FLAG_NONBLOCK);  // send message
-
-        //wait for document to send
-        nng_msg_free(out_msg);
+        if (nng_ctx_sendmsg(work->ctx, out_msg, !NNG_FLAG_NONBLOCK) != 0 ) {  // send message
+            //wait for document to send
+            nng_msg_free(out_msg);
+	}
     }
     void handle_get_collections(json& req, json& resp) {
         if (db_) {
