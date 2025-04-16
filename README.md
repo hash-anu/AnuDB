@@ -216,6 +216,8 @@ The following commands are supported through the MQTT interface:
 | `create_collection` | Creates a new collection | `{"command":"create_collection","collection_name":"users","request_id":"req123"}` |
 | `delete_collection` | Deletes an existing collection | `{"command":"delete_collection","collection_name":"users","request_id":"req123"}` |
 | `get_collections` | Lists all collections | `{"command":"get_collections","request_id":"req123"}` |
+| `export_collection` | Exports a collection to JSON files in specified directory | `{"command":"export_collection","collection_name":"users","dest_dir":"./product_mqtt_export/","request_id":"req123"}` |
+
 
 #### Document Operations
 
