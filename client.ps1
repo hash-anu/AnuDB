@@ -113,24 +113,26 @@ foreach ($p in $products) {
     Start-Sleep -Milliseconds 300
 }
 
-sleep 10
+sleep 1
+Send-Request -Command "export_collection" -Payload '"collection_name": "users","dest_dir":"./product_mqtt_export/",'
+sleep 1
 Send-Request -Command "read_document" -Payload '"collection_name": "users","document_id": "p1010",'
 Send-Request -Command "read_document" -Payload '"collection_name": "users",'
 Send-Request -Command "read_document" -Payload '"collection_name": "users","limit": 1,'
-sleep 10
+sleep 1
 Send-Request -Command "delete_document" -Payload '"collection_name": "users","document_id": "user123",'
-sleep 10
+sleep 1
 Send-Request -Command "read_document" -Payload '"collection_name": "users",'
-sleep 10
+sleep 1
 Send-Request -Command "create_index" -Payload '"collection_name": "users","field": "price",'
-sleep 10
+sleep 1
 # Can also use different operators that ANuDB supports, such as $lt, $gt, $eq, $orderby, $and, $or
 Send-Request -Command "find_documents" -Payload '"collection_name": "users","query": { "$gt": { "price": 179.9 } },'
-sleep 10
+sleep 1
 Send-Request -Command "delete_index" -Payload '"collection_name": "users","field": "price",'
-sleep 10
+sleep 1
 Send-Request -Command "delete_collection" -Payload '"collection_name": "users",'
-sleep 10
+sleep 1
 Send-Request -Command "read_document" -Payload '"collection_name": "users",'
 
 Write-Host "`nTest completed. Subscribe manually to 'anudb/response/+' to see responses."

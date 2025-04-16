@@ -221,7 +221,7 @@ send_request() {
 execute_arbitrary_command() {
   echo -e "\n${BLUE}Execute arbitrary AnuDB command${NC}"
   echo -e "${YELLOW}Available commands: create_collection, delete_collection, create_document, read_document, update_document, delete_document,${NC}"
-  echo -e "${YELLOW}                   create_index, delete_index, find_documents, get_collections, get_indexes${NC}"
+  echo -e "${YELLOW}                   create_index, delete_index, find_documents, get_collections, get_indexes, export_collection${NC}"
 
   # Get command from user
   read -p "Enter command: " cmd
@@ -280,46 +280,50 @@ perform_demo() {
   echo -e "\n${BLUE}Step $((step++)): Listing all collections${NC}"
   send_request "get_collections" "" || return 1
 
-  # Step 4: Read a specific document
+  # Step 4: Export collection to Json file
+  echo -e "\n${BLUE}Step $((step++)): Exporting collection to dest directory${NC}"
+  send_request "export_collection" "\"collection_name\":\"${COLLECTION_NAME}\",\"dest_dir\":\".\\demo\","  || return 1
+
+  # Step 5: Read a specific document
   echo -e "\n${BLUE}Step $((step++)): Reading a specific product (p1001)${NC}"
   send_request "read_document" "\"collection_name\":\"${COLLECTION_NAME}\",\"document_id\":\"p1001\"," || return 1
 
-  # Step 5: List all documents
+  # Step 6: List all documents
   echo -e "\n${BLUE}Step $((step++)): Listing all products${NC}"
   send_request "read_document" "\"collection_name\":\"${COLLECTION_NAME}\"," || return 1
 
-  # Step 6.1: Create an index
+  # Step 7.1: Create an index
   echo -e "\n${BLUE}Step $((step++)): Creating an index on 'price' field${NC}"
   send_request "create_index" "\"collection_name\":\"${COLLECTION_NAME}\",\"field\":\"price\"," || return 1
 
-  # Step 6.2: Create an index
+  # Step 7.2: Create an index
   echo -e "\n${BLUE}Step $((step++)): Creating an index on 'category' field${NC}"
   send_request "create_index" "\"collection_name\":\"${COLLECTION_NAME}\",\"field\":\"category\"," || return 1
 
-  # Step 6.3: Create an index
+  # Step 7.3: Create an index
   echo -e "\n${BLUE}Step $((step++)): Creating an index on 'rating' field${NC}"
   send_request "create_index" "\"collection_name\":\"${COLLECTION_NAME}\",\"field\":\"rating\"," || return 1
 
-  # Step 7: Get all indexes for the collection
+  # Step 8: Get all indexes for the collection
   echo -e "\n${BLUE}Step $((step++)): Getting all indexes for collection '${COLLECTION_NAME}'${NC}"
   send_request "get_indexes" "\"collection_name\":\"${COLLECTION_NAME}\"," || return 1
 
   # Step 8: Demonstrate query operators
   # Note: Using double quotes for operators to avoid bash variable substitution
 
-  # Step 8.1: $eq operator - Find a specific product by category
+  # Step 9.1: $eq operator - Find a specific product by category
   echo -e "\n${BLUE}Step $((step++)): Finding products in 'Electronics' category using \$eq operator${NC}"
   send_request "find_documents" "\"collection_name\":\"${COLLECTION_NAME}\",\"query\":{\"\$eq\":{\"category\":\"Electronics\"}}," || return 1
 
-  # Step 8.2: $gt operator - Find products over $300
+  # Step 9.2: $gt operator - Find products over $300
   echo -e "\n${BLUE}Step $((step++)): Finding products priced over \$300 using \$gt operator${NC}"
   send_request "find_documents" "\"collection_name\":\"${COLLECTION_NAME}\",\"query\":{\"\$gt\":{\"price\":300.0}}," || return 1
 
-  # Step 8.3: $lt operator - Find products under $200
+  # Step 9.3: $lt operator - Find products under $200
   echo -e "\n${BLUE}Step $((step++)): Finding products priced under \$200 using \$lt operator${NC}"
   send_request "find_documents" "\"collection_name\":\"${COLLECTION_NAME}\",\"query\":{\"\$lt\":{\"price\":200.0}}," || return 1
 
-  # Step 8.4: $and operator - Find products in Electronics with rating > 4.5
+  # Step 9.4: $and operator - Find products in Electronics with rating > 4.5
   echo -e "\n${BLUE}Step $((step++)): Finding Electronics products with rating > 4.5 using \$and operator${NC}"
   query="{\"\$and\":[{\"\$eq\":{\"category\":\"Electronics\"}},{\"\$gt\":{\"rating\":4.5}}]}"
   send_request "find_documents" "\"collection_name\":\"${COLLECTION_NAME}\",\"query\":$query," || return 1
@@ -329,11 +333,11 @@ perform_demo() {
   query="{\"\$or\":[{\"\$eq\":{\"category\":\"Electronics\"}},{\"\$gt\":{\"price\":300.0}}]}"
   send_request "find_documents" "\"collection_name\":\"${COLLECTION_NAME}\",\"query\":$query," || return 1
 
-  # Step 8.6: $orderBy operator - List products ordered by price (descending)
+  # Step 9.6: $orderBy operator - List products ordered by price (descending)
   echo -e "\n${BLUE}Step $((step++)): Listing products ordered by price (descending) using \$orderBy operator${NC}"
   send_request "find_documents" "\"collection_name\":\"${COLLECTION_NAME}\",\"query\":{\"\$orderBy\":{\"price\":\"desc\"}}," || return 1
 
-  # Step 9: Delete a document
+  # Step 10: Delete a document
   echo -e "\n${BLUE}Step $((step++)): Deleting a product (p1003)${NC}"
   send_request "delete_document" "\"collection_name\":\"${COLLECTION_NAME}\",\"document_id\":\"p1003\"," || return 1
 

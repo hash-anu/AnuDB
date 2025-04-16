@@ -407,6 +407,43 @@ private:
             resp["Collections"] = collections;
         }
 	}
+    void handle_export_collection(json& req, json& resp) {
+        try {
+            std::string collectionName = req["collection_name"];
+            if (db_) {
+                if (collMap_.count(collectionName) == 0) {
+
+                    Collection* coll = db_->getCollection(collectionName);
+                    if (coll != NULL) {
+                        collMap_[collectionName] = coll;
+                    }
+                    else {
+                        resp["status"] = "error";
+                        resp["message"] = "Collection :" + collectionName + " is not found";
+                        return;
+                    }
+                }
+                std::string destDir = req["dest_dir"];
+                Collection* coll = collMap_[collectionName];
+                std::vector<std::string> indexes;
+                Status status = coll->exportAllToJsonAsync(destDir);
+                if (status.ok()) {
+                    coll->waitForExportOperation();
+
+                    resp["status"] = "success";
+                    resp["message"] = "Collection: " + collectionName + " exported successfully to " + destDir;
+                }
+                else {
+                    resp["status"] = "error";
+                    resp["message"] = status.message();
+                }
+            }
+        }
+        catch (const std::exception& e) {
+            resp["status"] = "error";
+            resp["message"] = std::string("Exception: ") + e.what();
+        }
+    }
 	void handle_get_indexes(json& req, json& resp) {
 		try {
 			std::string collectionName = req["collection_name"];
@@ -683,6 +720,9 @@ private:
             else if (cmd == "find_documents") {
                 handle_find_documents(req, resp, wrk, response_topic);
                 resp["status"] = "success";
+            }
+            else if (cmd == "export_collection") {
+                handle_export_collection(req, resp);
             }
             else {
                 resp["status"] = "error";
