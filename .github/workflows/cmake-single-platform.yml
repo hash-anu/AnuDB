@@ -20,14 +20,13 @@ jobs:
     - name: Set up CMake
       uses: lukka/get-cmake@latest
 
-    - name: Prepare Build Directory
-      run: |
-        mkdir -p build
-        cd build
-        cmake ..
-        make
+    - name: Configure CMake with Compatibility Flag
+      run: cmake -S . -B build -DCMAKE_POLICY_VERSION=3.5
 
-    - name: Run Tests (if applicable)
+    - name: Build the project
+      run: cmake --build build
+
+    - name: Run Tests
       run: |
         cd build
         ctest --output-on-failure || echo "No tests found or some tests failed"
