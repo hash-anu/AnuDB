@@ -282,7 +282,7 @@ perform_demo() {
 
   # Step 4: Export collection to Json file
   echo -e "\n${BLUE}Step $((step++)): Exporting collection to dest directory${NC}"
-  send_request "export_collection" "\"collection_name\":\"${COLLECTION_NAME}\",\"dest_dir\":\".\\demo\","  || return 1
+  send_request "export_collection" "\"collection_name\":\"${COLLECTION_NAME}\",\"dest_dir\":\"./demo/\","  || return 1
 
   # Step 5: Read a specific document
   echo -e "\n${BLUE}Step $((step++)): Reading a specific product (p1001)${NC}"
