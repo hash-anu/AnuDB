@@ -15,13 +15,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        submodules: recursive  # Ensures third_party/nanomq is initialized
+        submodules: recursive
 
     - name: Set up CMake
       uses: lukka/get-cmake@latest
 
-    - name: Configure CMake with Compatibility Flag
-      run: cmake -S . -B build -DCMAKE_POLICY_VERSION=3.5
+    - name: Configure CMake with Legacy Compatibility
+      run: cmake -S . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 
     - name: Build the project
       run: cmake --build build
