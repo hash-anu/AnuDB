@@ -7,7 +7,7 @@ You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [
 ## Features
 
 - **Embedded & Serverless**: Run directly within your application with no separate server process required
-- **Embedded Platform Support**: Specifically designed for both standard Linux systems and embedded platforms
+- **Embedded Platform Support**: Specifically designed for both standard Linux/Windows systems and embedded platforms
 -  **Faster Writes** – RocksDB (LSM-tree) backend is optimized for high-speed inserts/updates.
 - **JSON Document Storage**: Store and query complex JSON documents
 - **RocksDB Backend**: Built on RocksDB for high performance and durability
