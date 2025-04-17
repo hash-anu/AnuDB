@@ -1,6 +1,9 @@
 ﻿#define _CRT_DECLARE_NONSTDC_NAMES 1
 #include <nng/mqtt/mqtt_client.h>
 #include <nng/nng.h>
+#include <nng/supplemental/tls/tls.h>
+#include <nng/supplemental/util/options.h>
+#include <nng/supplemental/util/platform.h>
 #include <Database.h>
 #include <iostream>
 #include <string>
@@ -734,6 +737,101 @@ private:
             resp["message"] = std::string("Exception :") + e.what();
         }
         return resp.dump();
+    }
+
+    static void loadfile(const char* path, void** datap, size_t* lenp)
+    {
+        FILE* f;
+        size_t total_read = 0;
+        size_t allocation_size = BUFSIZ;
+        char* fdata;
+        char* realloc_result;
+
+        if (strcmp(path, "-") == 0) {
+            f = stdin;
+        }
+        else {
+            if ((f = fopen(path, "rb")) == NULL) {
+                fprintf(stderr, "Cannot open file %s: %s", path,
+                    strerror(errno));
+                exit(1);
+            }
+        }
+
+        if ((fdata = malloc(allocation_size + 1)) == NULL) {
+            fprintf(stderr, "Out of memory.");
+        }
+
+        while (1) {
+            total_read += fread(
+                fdata + total_read, 1, allocation_size - total_read, f);
+            if (ferror(f)) {
+                if (errno == EINTR) {
+                    continue;
+                }
+                fprintf(stderr, "Read from %s failed: %s", path,
+                    strerror(errno));
+                exit(1);
+            }
+            if (feof(f)) {
+                break;
+            }
+            if (total_read == allocation_size) {
+                if (allocation_size > SIZE_MAX / 2) {
+                    fprintf(stderr, "Out of memory.");
+                }
+                allocation_size *= 2;
+                if ((realloc_result = realloc(
+                    fdata, allocation_size + 1)) == NULL) {
+                    free(fdata);
+                    fprintf(stderr, "Out of memory.");
+                    exit(1);
+                }
+                fdata = realloc_result;
+            }
+        }
+        if (f != stdin) {
+            fclose(f);
+        }
+        fdata[total_read] = '\0';
+        *datap = fdata;
+        *lenp = total_read;
+    }
+
+    static int
+        init_dialer_tls(nng_dialer d, const char* cacert, const char* cert,
+            const char* key, const char* pass)
+    {
+        nng_tls_config* cfg;
+        int             rv;
+
+        if ((rv = nng_tls_config_alloc(&cfg, NNG_TLS_MODE_CLIENT)) != 0) {
+            return (rv);
+        }
+
+        if (cert != NULL && key != NULL) {
+            nng_tls_config_auth_mode(cfg, NNG_TLS_AUTH_MODE_REQUIRED);
+            if ((rv = nng_tls_config_own_cert(cfg, cert, key, pass)) !=
+                0) {
+                nng_tls_config_free(cfg);
+                return (rv);
+            }
+        }
+        else {
+            nng_tls_config_auth_mode(cfg, NNG_TLS_AUTH_MODE_OPTIONAL);
+        }
+
+        if (cacert != NULL) {
+            if ((rv = nng_tls_config_ca_chain(cfg, cacert, NULL)) != 0) {
+                nng_tls_config_free(cfg);
+                return (rv);
+            }
+        }
+
+        rv = nng_dialer_set_ptr(d, NNG_OPT_TLS_CONFIG, cfg);
+
+        nng_tls_config_free(cfg);
+        return (rv);
     }
 
     std::string broker_url_;
