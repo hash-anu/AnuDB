@@ -1,5 +1,8 @@
 add_executable(AnuDBMqttBridge AnuDBMqttClient.cpp)
 
+# Enable TLS for NanoMQ
+set(NNG_ENABLE_TLS ON CACHE BOOL "Enable TLS in NanoMQ" FORCE)
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/nanomq "${CMAKE_BINARY_DIR}/nanomq-build" )
 
 # Link against your project library
