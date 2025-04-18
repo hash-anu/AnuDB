@@ -37,11 +37,29 @@ using namespace anudb;
 using json = nlohmann::json;
 
 class AnuDBMqttClient {
+    //broker_url, client_id, db.get(), user_name, passwd,
+    //tls_enabled, cert, key, pass, cacert
 public:
     AnuDBMqttClient(const std::string& broker_url, const std::string& client_id, Database* db, const std::string& user_name, 
-                    const std::string& passwd)
-        : broker_url_(broker_url), client_id_(client_id), db_(db), running_(false), user_name_(user_name), pswd_(passwd)
-    {}
+                    const std::string& passwd, bool tls_enabled, const std::string& client_cert, const std::string& key, const std::string& pass, 
+                    const std::string& ca_cert)
+        : broker_url_(broker_url), client_id_(client_id), db_(db), running_(false), user_name_(user_name), pswd_(passwd), tls_enabled_(tls_enabled),
+        cert_(client_cert), key_(key), pass_(pass), ca_cert_(ca_cert)
+    {
+        cacertp_ = keyp_ = certp_ = NULL;
+        if (ca_cert_ != "") {
+            size_t ca_cert_sz = 0;
+            loadfile(ca_cert_.c_str(), &cacertp_, &ca_cert_sz);
+        }
+        if (cert_ != "") {
+            size_t cli_cert_sz = 0;
+            loadfile(cert_.c_str(), &certp_, &cli_cert_sz);
+        }
+        if (key != "") {
+            size_t key_len = 0;
+            loadfile(key_.c_str(), &keyp_, &key_len);
+        }
+    }
 
     ~AnuDBMqttClient() {
         stop();
@@ -238,6 +256,14 @@ public:
             return false;
         }
 
+        if (tls_enabled_) {
+            if ((rv = init_dialer_tls(dialer, cacertp_, certp_,
+                keyp_, pass_.c_str())) != 0) {
+                std::cerr << "Failed to handshake tls connection : " << nng_strerror(rv) << std::endl;
+                return false;
+            }
+        }
+
         nng_dialer_set_ptr(dialer, NNG_OPT_MQTT_CONNMSG, msg);
         if ((rv = nng_dialer_start(dialer, NNG_FLAG_ALLOC)) != 0) {
             std::cerr << "Failed to start dialer: " << nng_strerror(rv) << std::endl;
@@ -260,6 +286,19 @@ public:
         if (!status.ok()) {
             std::cerr << "Failed to close database: " << status.message() << std::endl;
         }
+        if (cacertp_ != NULL) {
+            delete cacertp_;
+            cacertp_ = NULL;
+        }
+        if (keyp_ != NULL) {
+            delete keyp_;
+            keyp_ = NULL;
+        }
+        if (certp_ != NULL) {
+            delete certp_;
+            certp_ = NULL;
+        }
+
         std::cout << "Closing in progress..\n";
         // Stop receiving/sending new work
         for (auto* work : workers_) {
@@ -739,7 +778,7 @@ private:
         return resp.dump();
     }
 
-    static void loadfile(const char* path, void** datap, size_t* lenp)
+    void loadfile(const char* path, char** datap, size_t* lenp)
     {
         FILE* f;
         size_t total_read = 0;
@@ -798,17 +837,17 @@ private:
         *lenp = total_read;
     }
 
-    static int init_dialer_tls(nng_dialer d, const char* cacert, const char* cert,
+    int init_dialer_tls(nng_dialer d, const char* cacert, const char* cert,
             const char* key, const char* pass)
     {
         nng_tls_config* cfg;
-        int             rv;
+        int rv;
 
         if ((rv = nng_tls_config_alloc(&cfg, NNG_TLS_MODE_CLIENT)) != 0) {
             return (rv);
         }
 
-        if (cert != NULL && key != NULL) {
+        if ((cert != NULL && cert != "") && (key != NULL && key != "")) {
             nng_tls_config_auth_mode(cfg, NNG_TLS_AUTH_MODE_REQUIRED);
             if ((rv = nng_tls_config_own_cert(cfg, cert, key, pass)) !=
                 0) {
@@ -820,7 +859,7 @@ private:
             nng_tls_config_auth_mode(cfg, NNG_TLS_AUTH_MODE_OPTIONAL);
         }
 
-        if (cacert != NULL) {
+        if (cacert != NULL && cacert != "") {
             if ((rv = nng_tls_config_ca_chain(cfg, cacert, NULL)) != 0) {
                 nng_tls_config_free(cfg);
                 return (rv);
@@ -842,6 +881,14 @@ private:
     bool running_;
     std::vector<Work*> workers_;
     std::mutex mtx_, multiple_mtx_;
+    bool tls_enabled_;
+    std::string cert_;
+    std::string key_;
+    std::string pass_;
+    std::string ca_cert_;
+    char* cacertp_;
+    char* certp_;
+    char* keyp_;
     std::unordered_map<std::string, Collection*> collMap_;
 };
 
@@ -851,24 +898,82 @@ void signal_handler(int sig) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 5) {
-        std::cerr << "Usage: " << argv[0] << " <broker_url> <database_name> <username> <password>" << std::endl;
+    bool tls_enabled = false;
+    std::string broker_url = "", database_name = "", username = "", password = "";
+    std::string cert = "", key = "", pass = "", cacert = "";
+
+    // Check for minimum number of arguments (at least program name)
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " --broker_url <url> --database_name <name> "
+            << "--username <user> --password <pass> "
+            << "[--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]"
+            << std::endl;
         return 1;
     }
 
-    std::string broker_url = argv[1];
-    std::string db_name = argv[2];
-    std::string user_name = argv[3];
-    std::string passwd = argv[4];
+    // Parse named arguments
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+
+        if (arg == "--broker_url" && i + 1 < argc) {
+            broker_url = argv[++i];
+        }
+        else if (arg == "--database_name" && i + 1 < argc) {
+            database_name = argv[++i];
+        }
+        else if (arg == "--username" && i + 1 < argc) {
+            username = argv[++i];
+        }
+        else if (arg == "--password" && i + 1 < argc) {
+            password = argv[++i];
+        }
+        else if (arg == "--tls_cacert" && i + 1 < argc) {
+            cacert = argv[++i];
+            tls_enabled = true;
+        }
+        else if (arg == "--tls_cert" && i + 1 < argc) {
+            cert = argv[++i];
+            tls_enabled = true;
+        }
+        else if (arg == "--tls_key" && i + 1 < argc) {
+            key = argv[++i];
+            tls_enabled = true;
+        }
+        else if (arg == "--tls_pass" && i + 1 < argc) {
+            pass = argv[++i];
+            tls_enabled = true;
+        }
+        else {
+            std::cerr << "Unknown option: " << arg << std::endl;
+            std::cerr << "Usage: " << argv[0] << " --broker_url <url> --database_name <name> "
+                << "--username <user> --password <pass> "
+                << "[--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]"
+                << std::endl;
+            return 1;
+        }
+    }
+
+    // Validate required parameters
+    if (broker_url.empty() || database_name.empty()) {
+        std::cerr << "Error: Required parameters missing" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " --broker_url <url> --database_name <name> "
+            << "[--username <user>] [--password <pass>] "
+            << "[--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]"
+            << std::endl;
+        return 1;
+    }
 
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
     try {
-        std::unique_ptr<Database> db = std::make_unique<Database>(db_name);
+        std::unique_ptr<Database> db = std::make_unique<Database>(database_name);
         std::string client_id = "anudb_mqtt_server_" + std::to_string(time(nullptr));
 
-        AnuDBMqttClient mqtt_client(broker_url, client_id, db.get(), user_name, passwd);
+        AnuDBMqttClient mqtt_client(
+            broker_url, client_id, db.get(), username, password,
+            tls_enabled, cert, key, pass, cacert);
+
         if (!mqtt_client.start()) {
             std::cerr << "Failed to start MQTT client" << std::endl;
             return 1;
@@ -887,5 +992,6 @@ int main(int argc, char* argv[]) {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
     }
+
     return 0;
 }

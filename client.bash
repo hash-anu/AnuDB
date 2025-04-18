@@ -16,9 +16,10 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # === Configuration ===
-BROKER="localhost"
-PORT=1883
-CLIENT_ID="anudb_demo_$(date +%s)"
+BROKER="broker.emqx.io"
+PORT=8883
+CAFILE="broker.emqx.io-ca.crt"  # Default path to CA certificate
+LIENT_ID="anudb_demo_$(date +%s)"
 TOPIC_REQUEST="anudb/request"
 TOPIC_RESPONSE="anudb/response/+"
 RESPONSE_TIMEOUT=5
@@ -138,14 +139,14 @@ send_request() {
     cat_pid=$!
     
     # Start mosquitto_sub and redirect to fifo
-    (timeout $RESPONSE_TIMEOUT mosquitto_sub -h "$BROKER" -p "$PORT" -t "$TOPIC_RESPONSE" -v | grep -F "$req_id" > "$fifo_file") &
+    (timeout $RESPONSE_TIMEOUT mosquitto_sub -h "$BROKER" -p "$PORT" -t "$TOPIC_RESPONSE" -v --tls-version tlsv1.2 --cafile "$CAFILE" | grep -F "$req_id" > "$fifo_file") &
     sub_pid=$!
     
     # Small delay to ensure subscriber is ready
     sleep 0.2
     
     # Send the request
-    mosquitto_pub -h "$BROKER" -p "$PORT" -t "$TOPIC_REQUEST" -f "$temp_file"
+    mosquitto_pub -h "$BROKER" -p "$PORT" -t "$TOPIC_REQUEST" -f "$temp_file" --tls-version tlsv1.2 --cafile "$CAFILE"
     
     # Wait for the timeout to complete
     wait $sub_pid 2>/dev/null
@@ -176,14 +177,14 @@ send_request() {
     fi
   else
     # For single response, use a more reliable approach
-    (timeout $RESPONSE_TIMEOUT mosquitto_sub -h "$BROKER" -p "$PORT" -t "$TOPIC_RESPONSE" -v | grep -m 1 -F "$req_id" > "$response_file") &
+    (timeout $RESPONSE_TIMEOUT mosquitto_sub -h "$BROKER" -p "$PORT" -t "$TOPIC_RESPONSE" -v --tls-version tlsv1.2 --cafile "$CAFILE" | grep -m 1 -F "$req_id" > "$response_file") &
     sub_pid=$!
     
     # Small delay to ensure subscriber is ready
     sleep 0.2
     
     # Send the request
-    mosquitto_pub -h "$BROKER" -p "$PORT" -t "$TOPIC_REQUEST" -f "$temp_file"
+    mosquitto_pub -h "$BROKER" -p "$PORT" -t "$TOPIC_REQUEST" -f "$temp_file" --tls-version tlsv1.2 --cafile "$CAFILE"
     
     # Wait for the response or timeout
     wait $sub_pid 2>/dev/null
@@ -662,8 +663,9 @@ show_help() {
   echo ""
   echo "Options:"
   echo "  -h, --help           Show this help message"
-  echo "  -b, --broker HOST    Set MQTT broker address (default: localhost)"
-  echo "  -p, --port PORT      Set MQTT broker port (default: 1883)"
+  echo "  -b, --broker HOST    Set MQTT broker address (default: broker.emqx.io)"
+  echo "  -p, --port PORT      Set MQTT broker port (default: 8883)"
+  echo "  -a, --cafile FILE    Set CA certificate file (default: broker.emqx.io-ca.crt)"
   echo "  -c, --collection NAME Set collection name (default: product_catalog)"
   echo "  -x, --execute        Execute a single arbitrary command and exit"
   echo "  -l, --load-test      Run load test against the database"
@@ -689,6 +691,10 @@ parse_args() {
         ;;
       -p|--port)
         PORT="$2"
+        shift 2
+        ;;
+      -a|--cafile)
+        CAFILE="$2"
         shift 2
         ;;
       -c|--collection)
