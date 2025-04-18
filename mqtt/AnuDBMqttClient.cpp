@@ -758,7 +758,7 @@ private:
             }
         }
 
-        if ((fdata = malloc(allocation_size + 1)) == NULL) {
+        if ((fdata = (char*) malloc(allocation_size + 1)) == NULL) {
             fprintf(stderr, "Out of memory.");
         }
 
@@ -781,7 +781,7 @@ private:
                     fprintf(stderr, "Out of memory.");
                 }
                 allocation_size *= 2;
-                if ((realloc_result = realloc(
+                if ((realloc_result = (char*)realloc(
                     fdata, allocation_size + 1)) == NULL) {
                     free(fdata);
                     fprintf(stderr, "Out of memory.");
@@ -798,8 +798,7 @@ private:
         *lenp = total_read;
     }
 
-    static int
-        init_dialer_tls(nng_dialer d, const char* cacert, const char* cert,
+    static int init_dialer_tls(nng_dialer d, const char* cacert, const char* cert,
             const char* key, const char* pass)
     {
         nng_tls_config* cfg;
