@@ -905,7 +905,7 @@ int main(int argc, char* argv[]) {
     // Check for minimum number of arguments (at least program name)
     if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " --broker_url <url> --database_name <name> "
-            << "--username <user> --password <pass> "
+            << "[--username <user>] [--password <pass>] "
             << "[--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]"
             << std::endl;
         return 1;
