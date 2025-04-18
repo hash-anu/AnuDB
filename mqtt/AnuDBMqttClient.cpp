@@ -946,7 +946,7 @@ int main(int argc, char* argv[]) {
         else {
             std::cerr << "Unknown option: " << arg << std::endl;
             std::cerr << "Usage: " << argv[0] << " --broker_url <url> --database_name <name> "
-                << "--username <user> --password <pass> "
+                << "[--username <user>] [--password <pass>] "
                 << "[--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]"
                 << std::endl;
             return 1;
