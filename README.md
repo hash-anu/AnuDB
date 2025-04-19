@@ -21,6 +21,7 @@ You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [
 - **Windows/Linux Support**: Designed for Windows/Linux environments and embedded Linux platforms
 - **MQTT Interface**: Connect and operate via MQTT protocol from various platforms
 - **High Concurrency**: Supports 32 concurrent nng worker threads for handling MQTT requests
+- **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
 
 ## Prerequisites
 
@@ -28,6 +29,7 @@ You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [
 - CMake 3.10 or higher
 - ZSTD development libraries (optional, for compression support)
 - Mosquitto MQTT broker (for MQTT interface)
+- mbedTLS libraries (for TLS support)
 
 ## Building from Source
 There is no need to install any other third party libraries.
@@ -183,13 +185,17 @@ AnuDB implements a high-performance concurrent worker architecture to handle MQT
 
 2. Run the AnuDB MQTT service (after building the project):
    ```bash
-   # Start the AnuDB MQTT service using AnuDBMqttBridge
-   ./AnuDBMqttBridge mqtt-tcp://127.0.0.1:1883 AnuDB "" ""
+   # Start the AnuDB MQTT service using AnuDBMqttBridge (TLS example)
+   .\AnuDBMqttBridge.exe --broker_url tls+mqtt-tcp://<mqtt broker URL>:8883 --database_name <Your DB name> --tls_cacert <ca-cert path>
+
+   # Start the AnuDB MQTT service using AnuDBMqttBridge (with out TLS example)
+   .\AnuDBMqttBridge.exe --broker_url mqtt-tcp://<mqtt broker URL>:1883 --database_name <Your DB name>
+   
    ```
 
    Usage of AnuDBMqttBridge:
    ```
-   Usage: ./AnuDBMqttBridge <broker_url> <database_name> <mqtt-username> <mqtt-password>
+   Usage: AnuDBMqttBridge.exe --broker_url <url> --database_name <name> [--username <user>] [--password <pass>] [--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]
    ```
    Note: All fields are mandatory when using the MQTT bridge.
 ### Using the MQTT Client Scripts
@@ -431,6 +437,7 @@ products->updateDocument("prod001", pushOp);
 - Minimal dependencies for smaller deployment size
 - Supports cross-compilation for various architectures
 - MQTT interface enables lightweight clients on resource-constrained devices
+- TLS support can be conditionally compiled to reduce binary size when not needed
 
 ## Limitations
 
@@ -445,3 +452,4 @@ products->updateDocument("prod001", pushOp);
 - Uses [ZSTD](https://github.com/facebook/zstd) for compression (optional)
 - Uses [NanoMQ](https://github.com/nanomq/nanomq) for MQTT communication
 - Uses [nng (nanomsg-next-generation)](https://github.com/nanomsg/nng) for worker thread architecture
+- Uses [mbedTLS](https://tls.mbed.org/) for TLS security
