@@ -2,7 +2,7 @@
 
 AnuDB is a lightweight, serverless document database designed for C++ applications, offering efficient storage of JSON documents through MessagePack serialization. It provides a serverless, schema-less solution for applications requiring flexible data management with robust query capabilities.
 
-You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [StorageEngine.cpp](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.cpp)  and [StorageEngine.h](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.h). Based on these configurations, you can get your desired performance results tailored to your specific platform requirements.
+ Since AnuDB written on top of RocksDB, it ensures atomicity, durability and consistency of your documents. You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [StorageEngine.cpp](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.cpp)  and [StorageEngine.h](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.h).Based on these configurations, you can get your desired performance results tailored to your specific platform requirements.
 
 ## Features
 
@@ -23,17 +23,6 @@ You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [
 - **High Concurrency**: Supports 32 concurrent nng worker threads for handling MQTT requests
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
 - **Cloud MQTT Support**: Compatible with major cloud MQTT brokers including AWS IoT, Azure IoT, and GCP IoT
-
-## ACID Properties
-
-As AnuDB is built on RocksDB, it inherits important ACID (Atomicity, Consistency, Isolation, Durability) characteristics:
-
-- **Atomicity**: Individual operations are atomic - they either complete entirely or not at all
-- **Consistency**: The database remains in a consistent state before and after transactions
-- **Isolation**: Concurrent operations don't interfere with each other thanks to RocksDB's snapshot isolation
-- **Durability**: Once committed, data remains stored even in the event of power loss or crashes
-
-These properties ensure reliable data handling for applications requiring transactional integrity, even in embedded environments.
 
 ## MQTT Interface
 
