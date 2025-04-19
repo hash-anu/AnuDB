@@ -197,7 +197,7 @@ AnuDB implements a high-performance concurrent worker architecture to handle MQT
    ```
    Usage: AnuDBMqttBridge.exe --broker_url <url> --database_name <name> [--username <user>] [--password <pass>] [--tls_cacert <path>] [--tls_cert <path>] [--tls_key <path>] [--tls_pass <pass>]
    ```
-   Note: All fields are mandatory when using the MQTT bridge.
+
 ### Using the MQTT Client Scripts
 
 We provide client scripts for both Linux (client.bash) and Windows (client.ps1) environments to interact with AnuDB via MQTT:
