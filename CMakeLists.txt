@@ -14,7 +14,7 @@ endif()
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_compile_definitions(MAKE_UNIQUE)
     add_compile_options(-Wno-error=array-bounds)
-    add_compile_options(-std=c++11)  # For GCC/Clang
+    #add_compile_options(-std=c++11)  # For GCC/Clang
 endif()
 
 #test dir

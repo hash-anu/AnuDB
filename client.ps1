@@ -1,6 +1,6 @@
 # Configuration
-$BROKER = "localhost"
-$PORT = 1883
+$BROKER = "broker.emqx.io"
+$PORT = 8883  # SSL/TLS port
 $CLIENT_ID = "anudb_test_$([int](Get-Date -UFormat %s))"
 $TOPIC_REQUEST = "anudb/request"
 
@@ -25,15 +25,16 @@ function Send-Request {
     $tempFile = "payload_$req_id.json"
     $json | Set-Content -Encoding UTF8 $tempFile
 
-    & mosquitto_pub.exe -h $BROKER -p $PORT -t $TOPIC_REQUEST -f $tempFile
+    # Use TLS for secure connection
+    & mosquitto_pub.exe -h $BROKER -p $PORT --cafile "broker.emqx.io-ca.crt" -t $TOPIC_REQUEST -f $tempFile
     Remove-Item $tempFile -Force
 }
 
 # === Start of testing ===
-Write-Host "Testing AnuDB MQTT API..."
+Write-Host "Testing AnuDB MQTT API with EMQ X broker..."
 
 Send-Request -Command "create_collection" -Payload '"collection_name": "users",'
-sleep 1
+Start-Sleep -Seconds 1
 
 Send-Request -Command "create_document" -Payload @'
 "collection_name": "users",
@@ -113,27 +114,26 @@ foreach ($p in $products) {
     Start-Sleep -Milliseconds 300
 }
 
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "export_collection" -Payload '"collection_name": "users","dest_dir":"./product_mqtt_export/",'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "read_document" -Payload '"collection_name": "users","document_id": "p1010",'
 Send-Request -Command "read_document" -Payload '"collection_name": "users",'
 Send-Request -Command "read_document" -Payload '"collection_name": "users","limit": 1,'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "delete_document" -Payload '"collection_name": "users","document_id": "user123",'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "read_document" -Payload '"collection_name": "users",'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "create_index" -Payload '"collection_name": "users","field": "price",'
-sleep 1
+Start-Sleep -Seconds 1
 # Can also use different operators that ANuDB supports, such as $lt, $gt, $eq, $orderby, $and, $or
 Send-Request -Command "find_documents" -Payload '"collection_name": "users","query": { "$gt": { "price": 179.9 } },'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "delete_index" -Payload '"collection_name": "users","field": "price",'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "delete_collection" -Payload '"collection_name": "users",'
-sleep 1
+Start-Sleep -Seconds 1
 Send-Request -Command "read_document" -Payload '"collection_name": "users",'
 
 Write-Host "`nTest completed. Subscribe manually to 'anudb/response/+' to see responses."
-
