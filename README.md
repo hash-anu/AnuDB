@@ -22,7 +22,7 @@ AnuDB is a lightweight, serverless document database designed for C++ applicatio
 - **MQTT Interface**: Connect and operate via MQTT protocol from various platforms
 - **High Concurrency**: Supports 32 concurrent nng worker threads for handling MQTT requests
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
-- **Cloud MQTT Support**: Compatible with major cloud MQTT brokers including AWS IoT, Azure IoT, and GCP IoT
+- **Cloud MQTT Support**: Compatible with major cloud MQTT brokers including AWS IoT, Azure IoT, GCP IoT, etc
 
 ## MQTT Interface
 
