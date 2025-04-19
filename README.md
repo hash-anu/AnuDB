@@ -24,6 +24,17 @@ You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
 - **Cloud MQTT Support**: Compatible with major cloud MQTT brokers including AWS IoT, Azure IoT, and GCP IoT
 
+## ACID Properties
+
+As AnuDB is built on RocksDB, it inherits important ACID (Atomicity, Consistency, Isolation, Durability) characteristics:
+
+- **Atomicity**: Individual operations are atomic - they either complete entirely or not at all
+- **Consistency**: The database remains in a consistent state before and after transactions
+- **Isolation**: Concurrent operations don't interfere with each other thanks to RocksDB's snapshot isolation
+- **Durability**: Once committed, data remains stored even in the event of power loss or crashes
+
+These properties ensure reliable data handling for applications requiring transactional integrity, even in embedded environments.
+
 ## Prerequisites
 
 - C++11 >= compatible compiler
