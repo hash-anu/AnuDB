@@ -22,6 +22,7 @@ You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [
 - **MQTT Interface**: Connect and operate via MQTT protocol from various platforms
 - **High Concurrency**: Supports 32 concurrent nng worker threads for handling MQTT requests
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
+- **Cloud MQTT Support**: Compatible with major cloud MQTT brokers including AWS IoT, Azure IoT, and GCP IoT
 
 ## Prerequisites
 
