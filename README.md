@@ -37,7 +37,7 @@ In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then
 - C++11 >= compatible compiler
 - CMake 3.10 or higher
 - ZSTD development libraries (optional, for compression support)
-- Mosquitto MQTT broker (for MQTT interface, supported version v3.1.1 but 5.0.0 version supported with simple API modification)
+- Mosquitto MQTT broker (for MQTT interface, supported version v3.1.1 but 5.0.0 version can be supported with simple API modification)
 - mbedTLS libraries (for TLS support)
 
 ## Building from Source
