@@ -35,8 +35,20 @@ Status Database::dropCollection(const std::string& name) {
     if (it != collections_.end()) {
         collections_.erase(it);
     }
-
-    // Drop from the storage engine
+    // Removing collection indexes first
+    Collection* col = getCollection(name);
+    std::vector<std::string> indexes;
+    Status status = col->getIndex(indexes);
+    if (!status.ok()) {
+        std::cerr << "Unable to fetch index list of collection : " << status.message() << std::endl;
+    }
+    for (std::string index : indexes) {
+        status = col->deleteIndex(index);
+        if (!status.ok()) {
+            std::cerr << "Failed to drop index: " << index << " with this error message: " << status.message() << std::endl;
+        }
+    }
+    // Drop collection from the storage engine
     return engine_.dropCollection(name);
 }
 
