@@ -35,6 +35,14 @@ As AnuDB is built on RocksDB, it inherits important ACID (Atomicity, Consistency
 
 These properties ensure reliable data handling for applications requiring transactional integrity, even in embedded environments.
 
+## MQTT Interface
+
+AnuDB now supports interaction via MQTT protocol, allowing you to connect and operate the database from various platforms without direct C++ integration. The implementation uses nlohmann::json for JSON handling.
+
+In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using client.bash script, ran all supported MQTT commands
+
+![AnuDBMqttDemo](demo.gif)
+
 ## Prerequisites
 
 - C++11 >= compatible compiler
@@ -127,14 +135,6 @@ int main() {
 [Sample for get list of collections](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBCreateGetDropCollections.cpp)
 
 [Sample for Export then Import operation](https://github.com/hash-anu/AnuDB/blob/main/examples/AnuDBExportThenImport.cpp)
-
-## MQTT Interface
-
-AnuDB now supports interaction via MQTT protocol, allowing you to connect and operate the database from various platforms without direct C++ integration. The implementation uses nlohmann::json for JSON handling.
-
-In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using client.bash script, ran all supported MQTT commands
-
-![AnuDBMqttDemo](demo.gif)
 
 ### High-Performance MQTT Worker Architecture
 
