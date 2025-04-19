@@ -27,6 +27,9 @@ AnuDB is a lightweight, serverless document database designed for C++ applicatio
 ## MQTT Interface
 
 AnuDB now supports interaction via MQTT protocol, allowing you to connect and operate the database from various platforms without direct C++ integration. The implementation uses nlohmann::json for JSON handling.
+AnuDB subscribe to MQTT `anudb/request` topic then if request comes with request id on mentioned topic, then it does that operation then send reponse back on `anudb/response/requestid`, we can get all responses on `anudb/response/+` topic, below diagram to illustrate it.
+
+![AnuDB MQTT Communication](https://github.com/user-attachments/assets/3b7f00b7-dc23-48cd-8724-8cfc2d4ad696)
 
 In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using client.bash script, ran all supported MQTT commands
 
