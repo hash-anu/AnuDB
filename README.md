@@ -189,19 +189,12 @@ AnuDB implements a high-performance concurrent worker architecture to handle MQT
 
 2. Run the AnuDB MQTT service (after building the project):
    ```bash
-   # Move to build/mqtt folder
-   # Windows
    # Start the AnuDB MQTT service using AnuDBMqttBridge (TLS example)
    .\AnuDBMqttBridge.exe --broker_url tls+mqtt-tcp://<mqtt broker URL>:8883 --database_name <Your DB name> --tls_cacert <ca-cert path>
 
    # Start the AnuDB MQTT service using AnuDBMqttBridge (with out TLS example)
    .\AnuDBMqttBridge.exe --broker_url mqtt-tcp://<mqtt broker URL>:1883 --database_name <Your DB name>
    
-   # Ubuntu/Debian
-   ./AnuDBMqttBridge --broker_url mqtt-tcp://<mqtt broker URL>:1883 --database_name <Your DB name>
-
-   Note: Use localhost in <mqtt broker URL> if you have installed mosquitto broker on your local host.
-
    ```
 
    Usage of AnuDBMqttBridge:
