@@ -219,6 +219,8 @@ send_request() {
 
 # Function to execute arbitrary commands
 execute_arbitrary_command() {
+  local continue_execution=true
+  while [ "$continue_execution" = true ]; do
   echo -e "\n${BLUE}Execute arbitrary AnuDB command${NC}"
   echo -e "${YELLOW}Available commands: create_collection, delete_collection, create_document, read_document, update_document, delete_document,${NC}"
   echo -e "${YELLOW}                   create_index, delete_index, find_documents, get_collections, get_indexes, export_collection${NC}"
@@ -240,6 +242,12 @@ execute_arbitrary_command() {
     fi
     send_request "$cmd" "$payload"
   fi
+  # Ask if the user wants to execute another command
+  read -p "Do you want to execute another command? (y/N): " retry
+  if [[ "$retry" != "y" && "$retry" != "Y" ]]; then
+    continue_execution=false
+  fi
+  done
 }
 
 # Function to demonstrate database operations
