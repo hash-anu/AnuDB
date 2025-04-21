@@ -35,6 +35,43 @@ In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then
 
 ![AnuDBMqttDemo](demo.gif)
 
+
+## Docker Support
+
+To run AnuDB using Docker:
+
+### 1. Pull the Docker Image
+```bash
+docker pull kanadaanu/anudb-mqtt:v1
+```
+
+### 2. Ensure MQTT Broker is Running
+You need an MQTT broker (e.g., [EMQX](https://www.emqx.io/), [Mosquitto](https://mosquitto.org/)) running before starting AnuDB.
+
+### 3. Run the Docker Container
+Use one of the following commands based on your setup:
+
+```bash
+# With TLS (e.g., EMQX public broker)
+docker run -v <disk folder>:/data kanadaanu/anudb-mqtt:v1 \
+  --broker_url tls+mqtt-tcp://<broker_url>:8883 \
+  --database_name AnuDB \
+  --tls_cacert <> \
+  --tls_cert <>
+   ...
+```
+
+```bash
+# Without TLS
+docker run -v <disk folder>:/data kanadaanu/anudb-mqtt:v1 \
+  --broker_url mqtt-tcp://<broker_url>:1883 \
+  --database_name AnuDB
+```
+
+### Notes
+- The `/data` folder is where you should mount a disk volume to persist the database.
+- If you're using a TLS connection, place the required certificate files (e.g., CA cert) inside the mounted `/data` directory so that the binary can access them.
+
 ## Prerequisites
 
 - C++11 >= compatible compiler
