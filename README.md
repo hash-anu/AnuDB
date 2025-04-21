@@ -52,7 +52,7 @@ You need an MQTT broker (e.g., [EMQX](https://www.emqx.io/), [Mosquitto](https:/
 Use one of the following commands based on your setup:
 
 ```bash
-# With TLS (e.g., EMQX public broker)
+# With TLS (e.g., EMQX public broker, mosquitto broker, etc)
 docker run -v <disk folder>:/data kanadaanu/anudb-mqtt:v1 \
   --broker_url tls+mqtt-tcp://<broker_url>:8883 \
   --database_name AnuDB \
