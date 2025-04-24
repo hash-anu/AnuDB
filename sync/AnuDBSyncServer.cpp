@@ -46,6 +46,9 @@ public:
     // Get current sequence number
     uint64_t GetCurrentSequence() const;
 
+    // Update column family mapping
+    void UpdateColumnFamilyMap(uint32_t id, const std::string& name);
+
 private:
     // Handler for WAL operations
     class WalLogHandler : public rocksdb::WriteBatch::Handler {
@@ -59,8 +62,6 @@ private:
 
         rocksdb::Status DeleteCF(uint32_t column_family_id,
             const rocksdb::Slice& key) override;
-
-        void LogData(const rocksdb::Slice& blob) override;
 
     private:
         std::unordered_map<uint32_t, std::string>& cf_id_to_name;
@@ -115,6 +116,11 @@ WalTracker::WalTracker(rocksdb::DB* db,
             db_->GetName(),
             &cf_names);
     }
+}
+
+void WalTracker::UpdateColumnFamilyMap(uint32_t id, const std::string& name) {
+    callback_("CREATE_CF_MANUAL", name, std::to_string(id), "");
+    cf_id_to_name_[id] = name;
 }
 
 // Destructor
@@ -259,24 +265,6 @@ rocksdb::Status WalTracker::WalLogHandler::DeleteCF(
     return rocksdb::Status::OK();
 }
 
-void WalTracker::WalLogHandler::LogData(const rocksdb::Slice& blob) {
-    std::string data = blob.ToString();
-
-    if (data.find("rocksdb.ColumnFamilyAdd") != std::string::npos) {
-        std::regex rgx("name=([^,]+),id=(\\d+)");
-        std::smatch match;
-        if (std::regex_search(data, match, rgx) && match.size() == 3) {
-            std::string cf_name = match[1];
-            uint32_t cf_id = static_cast<uint32_t>(std::stoul(match[2]));
-            cf_id_to_name[cf_id] = cf_name;
-
-            if (callback) {
-                callback("CREATE_CF", cf_name, std::to_string(cf_id), "");
-            }
-        }
-    }
-}
-
 std::string WalTracker::WalLogHandler::GetCFName(uint32_t id) const {
     auto it = cf_id_to_name.find(id);
     return it != cf_id_to_name.end() ? it->second : "unknown";
@@ -299,7 +287,7 @@ class DatabaseOperations {
 public:
     // Constructor
     DatabaseOperations(rocksdb::DB* db,
-        const std::vector<rocksdb::ColumnFamilyHandle*>& cf_handles);
+        const std::vector<rocksdb::ColumnFamilyHandle*>& cf_handles,WalTracker* wal_tracker);
 
     // Destructor
     ~DatabaseOperations();
@@ -349,6 +337,7 @@ private:
     int ops_per_second_;
     std::mt19937 random_generator_;
     OperationCallback callback_;
+    WalTracker* waltracker_;
 };
 
 #endif // DATABASE_OPERATIONS_H
@@ -361,12 +350,14 @@ private:
 
 // Constructor
 DatabaseOperations::DatabaseOperations(rocksdb::DB* db,
-    const std::vector<rocksdb::ColumnFamilyHandle*>& cf_handles)
+    const std::vector<rocksdb::ColumnFamilyHandle*>& cf_handles,
+    WalTracker* wal_tracker)
     : db_(db),
     cf_handles_(cf_handles),
     should_stop_(false),
     is_running_(false),
-    ops_per_second_(10) {
+    ops_per_second_(10),
+    waltracker_(wal_tracker){
     // Initialize random generator
     std::random_device rd;
     random_generator_.seed(rd());
@@ -413,6 +404,10 @@ rocksdb::ColumnFamilyHandle* DatabaseOperations::CreateNewColumnFamily(const std
 
     if (status.ok() && cf_handle != nullptr) {
         cf_handles_.push_back(cf_handle);
+
+        if (waltracker_ != NULL) {
+            waltracker_->UpdateColumnFamilyMap(cf_handle->GetID(), cf_handle->GetName());
+        }
 
         if (callback_) {
             callback_("CREATE_CF_MANUAL", name, std::to_string(cf_handle->GetID()), "");
@@ -667,12 +662,12 @@ void DbOperationHandler(const std::string& operation,
     const std::string& key,
     const std::string& value) {
     std::lock_guard<std::mutex> lock(console_mutex);
-    
+#if 0
     std::cout << "[" << GetTimestamp() << "] [DB] ";
     std::cout << std::left << std::setw(12) << operation;
     std::cout << " | CF: " << std::setw(15) << cf_name;
     std::cout << " | Key: " << std::setw(20) << key;
-
+#endif
     if (!value.empty() && operation != "SCAN_START" && operation != "SCAN_END") {
         // Truncate value if it's too long
         std::string display_value = value;
@@ -732,7 +727,7 @@ int main(int argc, char** argv) {
     wal_tracker.RegisterCallback(WalOperationHandler);
 
     // Create database operations manager
-    DatabaseOperations db_ops(db.get(), cf_handles);
+    DatabaseOperations db_ops(db.get(), cf_handles, &wal_tracker);
     db_ops.RegisterCallback(DbOperationHandler);
 
     // Start WAL tracking
