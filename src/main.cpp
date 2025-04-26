@@ -32,16 +32,55 @@ void executeQuery(Collection* collection, const json& query, const std::string& 
     }
 }
 
+#include <chrono>
+// Mutex for thread-safe console output
+std::mutex console_mutex;
+// Function to get current timestamp as string
+std::string GetTimestamp() {
+    auto now = std::chrono::system_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d %H:%M:%S");
+    return ss.str();
+}
+// WAL operation handler
+void WalOperationHandler(const std::string& operation,
+    const std::string& cf_name,
+    const std::string& key,
+    const std::string& value) {
+    std::lock_guard<std::mutex> lock(console_mutex);
+
+    std::cout << "[" << GetTimestamp() << "] [WAL] ";
+    std::cout << std::left << std::setw(10) << operation;
+    std::cout << " | CF: " << std::setw(15) << cf_name;
+    std::cout << " | Key: " << std::setw(20) << key;
+
+    if (!value.empty()) {
+        // Truncate value if it's too long
+        std::string display_value = value;
+        if (display_value.length() > 30) {
+            display_value = display_value.substr(0, 27) + "...";
+        }
+        std::cout << " | Value: " << display_value;
+    }
+
+    std::cout << std::endl;
+}
+
 int main() {
+    bool walTracker = false;
     // Database initialization
     Database db("./product_db");
-    Status status = db.open();
-
+    Status status = db.open(walTracker);
     if (!status.ok()) {
         std::cerr << "Failed to open database: " << status.message() << std::endl;
         return 1;
     }
     std::cout << "Database opened successfully." << std::endl;
+
+    if (walTracker) {
+        db.registerCallback(WalOperationHandler);
+    }
 
     // Create products collection
     status = db.createCollection("products");

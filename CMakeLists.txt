@@ -100,5 +100,3 @@ set(ENABLE_OPENSSL OFF CACHE BOOL "Disable OpenSSL" FORCE)
 include_directories(${CMAKE_SOURCE_DIR}/third_party/nanomq/nanomq/include)
 # Add mqtt file
 add_subdirectory(mqtt)
-# Add sync
-add_subdirectory(sync)
