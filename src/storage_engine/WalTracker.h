@@ -19,6 +19,8 @@
 extern "C" uintptr_t __cdecl _beginthreadex(void*, unsigned int,
     unsigned int(__stdcall*)(void*), void*, unsigned int, unsigned int*);
 #endif
+#include "json.hpp"
+using json = nlohmann::json;
 #ifdef MAKE_UNIQUE
 #include <memory>
 
