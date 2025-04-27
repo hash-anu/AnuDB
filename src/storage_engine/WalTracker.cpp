@@ -154,7 +154,8 @@ rocksdb::Status WalTracker::WalLogHandler::PutCF(
     }
 
     if (callback) {
-        callback("PUT", cf_name, key.ToString(), value.ToString());
+        std::vector<uint8_t> value_vec(value.data(), value.data() + value.size());
+        callback("PUT", cf_name, key.ToString(), json::from_msgpack(value_vec)["data"].dump());
     }
 
     return rocksdb::Status::OK();

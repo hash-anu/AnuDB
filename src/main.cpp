@@ -58,9 +58,7 @@ void WalOperationHandler(const std::string& operation,
     if (!value.empty()) {
         // Truncate value if it's too long
         std::string display_value = value;
-        if (display_value.length() > 30) {
-            display_value = display_value.substr(0, 27) + "...";
-        }
+        
         std::cout << " | Value: " << display_value;
     }
 
@@ -68,7 +66,7 @@ void WalOperationHandler(const std::string& operation,
 }
 
 int main() {
-    bool walTracker = false;
+    bool walTracker = true;
     // Database initialization
     Database db("./product_db");
     Status status = db.open(walTracker);
