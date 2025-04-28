@@ -23,6 +23,7 @@ AnuDB is a lightweight, serverless document database designed for C++ applicatio
 - **High Concurrency**: Supports 32 concurrent nng worker threads(configurable using [CONCURRENT_THREADS](https://github.com/hash-anu/AnuDB/blob/main/mqtt/AnuDBMqttClient.cpp)) for handling MQTT requests
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
 - **Cloud MQTT Support**: Compatible with major cloud MQTT brokers
+- **ACID Compliance**: AnuDB inherits atomicity, consistency, isolation, and durability from RocksDB
 
 ## MQTT Interface
 
