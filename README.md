@@ -55,7 +55,7 @@ In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then
 
 ![AnuDBMqttDemo](demo.gif)
 
-[MQTT supported commands](#mqtt-interface)
+[MQTT supported commands](#supported-mqtt-commands)
 
 
 ## Docker Support
