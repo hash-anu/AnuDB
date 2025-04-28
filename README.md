@@ -19,6 +19,9 @@ Ready to try AnuDB for your project? Follow these simple steps to get started qu
 
 4. **Docker Support**  
    AnuDB supports Docker! Run AnuDB in a containerized environment with ease. See our [Docker setup guide](#docker-support) to get started.
+   
+6. **MQTT Support**  
+   AnuDB integrates seamlessly with MQTT, enabling real-time data communication between devices and servers. If you're working on IoT or real-time messaging systems, AnuDB's MQTT support will make your job easier. Check out our [MQTT integration guide](#mqtt-interface) to get started with MQTT and AnuDB.
 
 ## Features
 
