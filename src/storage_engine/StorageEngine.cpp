@@ -7,12 +7,54 @@ Status StorageEngine::open() {
 
 	RocksDBOptimizer::EmbeddedConfig config;
 
-	// Adjust for your specific embedded system
-	config.write_buffer_size = 512 * 1024;         // 512 KB per memtable
-	config.block_cache_size = 512 * 1024;         // 512 KB
-	config.enable_pipelined_write = true;   // 6.29.5 feature
+	// Edge-device optimized configuration for efficient single operations
+	// Memory footprint optimizations
+	config.write_buffer_size = 4 * 1024 * 1024;      // 4MB - smaller buffer to reduce memory usage
+	config.block_cache_size = 8 * 1024 * 1024;       // 8MB - moderate cache size for edge devices
+	config.max_open_files = 64;                      // Limit file handles to conserve resources
+
+	// Write optimizations for single operations
+	config.max_write_buffer_number = 2;              // Fewer write buffers to reduce memory
+	config.min_write_buffer_number = 1;              // Flush sooner for consistent latency
+	config.level0_file_num_compaction_trigger = 2;   // Balance between compaction frequency and performance
+
+	// Read optimizations - crucial for AnuDB's query advantage
+	config.block_size = 4 * 1024;                    // 4KB blocks - better for random access
+	config.bloom_filter_bits_per_key = 10;           // Efficient bloom filters for faster point lookups
+	config.cache_index_and_filter_blocks = true;     // Keep index and filters in cache for fast queries
+
+	// Lightweight background processing
+	config.max_background_jobs = 2;                  // Limited background jobs to reduce resource usage
+	config.max_background_compactions = 1;           // Single compaction thread to minimize CPU usage
+
+	// Disable features that consume extra resources
+	config.enable_pipelined_write = true;            // Optimize write path
+	config.enable_direct_io = false;                 // Better for most flash storage on edge devices
+	config.prefix_length = 8;                        // Efficient prefix length for indexing
 
 	options = RocksDBOptimizer::getOptimizedOptions(config);
+
+	// Additional edge-specific optimizations
+	options.allow_concurrent_memtable_write = false; // Reduce memory contention for single operations
+	options.enable_write_thread_adaptive_yield = true; // Better CPU utilization during writes
+	options.avoid_flush_during_shutdown = true;      // Faster shutdown
+
+	// Optimize for faster point operations (get/put)
+	options.level_compaction_dynamic_level_bytes = false; // Simpler level management
+	options.max_bytes_for_level_base = 16 * 1024 * 1024;  // 16MB for base level - smaller for edge devices
+	options.max_bytes_for_level_multiplier = 8;           // Moderate level scaling
+	options.optimize_filters_for_hits = true;             // Optimize bloom filters
+	options.report_bg_io_stats = false;                   // Eliminate overhead from statistics
+
+	// Reduce unnecessary CPU usage
+	options.compression = rocksdb::kNoCompression;   // Disable compression for faster point operations
+	options.bottommost_compression = rocksdb::kNoCompression;
+	options.skip_stats_update_on_db_open = true;
+	options.skip_checking_sst_file_sizes_on_db_open = true;
+
+	// Improve read performance with focused caching
+	options.use_adaptive_mutex = true;               // Reduce mutex contention
+	options.new_table_reader_for_compaction_inputs = false; // Save memory
 
 	// Get list of existing column families
 	std::vector<std::string> columnFamilies;
@@ -60,9 +102,11 @@ Status StorageEngine::open() {
 Status StorageEngine::close() {
 	if (db_) {
 		rocksdb::FlushOptions flush_options;
-		rocksdb::Status flush_status = db_->Flush(flush_options);
-		if (!flush_status.ok()) {
-			Status::IOError("Flush failed: " + flush_status.ToString());
+		for (auto it : columnFamilies_) {
+			rocksdb::Status flush_status = db_->Flush(flush_options, it.second);
+			if (!flush_status.ok()) {
+				Status::IOError("Flush failed: " + flush_status.ToString());
+			}
 		}
 
 		rocksdb::Status sync_status = db_->SyncWAL(); // Ensures WAL is persisted
