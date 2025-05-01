@@ -4,6 +4,25 @@ AnuDB is a lightweight, serverless document database designed for C++ applicatio
 
  Since AnuDB written on top of RocksDB, it ensures atomicity, durability and consistency of your documents. You can adjust memory/CPU usage of AnuDB based on RocksDB options mentioned in [StorageEngine.cpp](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.cpp)  and [StorageEngine.h](https://github.com/hash-anu/AnuDB/blob/master/src/storage_engine/StorageEngine.h).Based on these configurations, you can get your desired performance results tailored to your specific platform requirements.
 
+ ### Get Started with AnuDB!
+
+Ready to try AnuDB for your project? Follow these simple steps to get started quickly:
+
+1. **Install AnuDB**  
+   See the [installation guide](#building-from-source) to set up AnuDB on your machine.
+
+2. **Explore Example Code**  
+   Check out our [usage examples](#examples) to understand how to interact with AnuDB.
+
+3. **Start Building!**  
+   Dive right in by using AnuDB in your application and start storing your data with lightning-fast speed.
+
+4. **Docker Support**  
+   AnuDB supports Docker! Run AnuDB in a containerized environment with ease. See our [Docker setup guide](#docker-support) to get started.
+   
+6. **MQTT Support**  
+   AnuDB integrates seamlessly with MQTT, enabling real-time data communication between devices and servers. If you're working on IoT or real-time messaging systems, AnuDB's MQTT support will make your job easier. Check out our [MQTT integration guide](#mqtt-interface) to get started with MQTT and AnuDB.
+
 ## Features
 
 - **Embedded & Serverless**: Run directly within your application with no separate server process required
@@ -23,6 +42,7 @@ AnuDB is a lightweight, serverless document database designed for C++ applicatio
 - **High Concurrency**: Supports 32 concurrent nng worker threads(configurable using [CONCURRENT_THREADS](https://github.com/hash-anu/AnuDB/blob/main/mqtt/AnuDBMqttClient.cpp)) for handling MQTT requests
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
 - **Cloud MQTT Support**: Compatible with major cloud MQTT brokers
+- **ACID Compliance**: AnuDB inherits atomicity, consistency, isolation, and durability from RocksDB
 
 ## MQTT Interface
 
@@ -34,6 +54,8 @@ AnuDB subscribe to MQTT `anudb/request` topic then if request comes with request
 In below demo, showing AnuDBMqttBridge and mosquitto broker server started, then using client.bash script, ran all supported MQTT commands
 
 ![AnuDBMqttDemo](demo.gif)
+
+[MQTT supported commands](#supported-mqtt-commands)
 
 
 ## Docker Support
@@ -115,7 +137,7 @@ cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/your/toolchain.cmake \
 ```
 
 ## Examples
-Examples of AnuDB database have been added to the examples folder. 
+Examples of AnuDB database have been added to the examples folder.  [API Overview](https://github.com/hash-anu/AnuDB/tree/main?tab=readme-ov-file#api-overview)
 
 ## Quick Start
 

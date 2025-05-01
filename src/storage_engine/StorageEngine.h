@@ -216,7 +216,7 @@ namespace anudb {
 		// Optimized write options
 		static rocksdb::WriteOptions getWriteOptions() {
 			rocksdb::WriteOptions write_options;
-			write_options.sync = true;  // Better performance, but be careful
+			write_options.sync = false;  // Better performance, but be careful
 			write_options.disableWAL = false;  // Keep WAL for safety
 			return write_options;
 		}

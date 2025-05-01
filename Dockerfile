@@ -2,7 +2,7 @@
 FROM ubuntu:22.04 as builder
 
 # Install required packages
-RUN apt-get update && apt-get install -y python3 cmake git libzstd-dev mosquitto mosquitto-clients build-essential cmake && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cmake git libzstd-dev mosquitto mosquitto-clients build-essential cmake && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ RUN mkdir build
 
 # Build AnuDB
 WORKDIR /app/build
-RUN cmake -DMBEDTLS_BUILD_TESTING=OFF -DENABLE_TESTING=OFF -DZSTD_INCLUDE_DIR=/user/include -DZSTD_LIB_DIR=/usr/lib/x86_64-linux-gnu/ ..
+RUN cmake -DGEN_FILES=OFF -DMBEDTLS_BUILD_TESTING=OFF -DENABLE_TESTING=OFF -DZSTD_INCLUDE_DIR=/user/include -DZSTD_LIB_DIR=/usr/lib/x86_64-linux-gnu/ ..
 RUN make -j$(nproc)
 
 # Stage 2: Create a minimal runtime image
