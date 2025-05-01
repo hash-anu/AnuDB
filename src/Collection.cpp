@@ -35,7 +35,6 @@ Status Collection::deleteDocument(const std::string& id) {
 		return status;
 	}
 	for (std::string index : engine_->getIndexNames(name_)) {
-		std::cout << "index name::" << index << std::endl;
 		if (hasIndexField(doc.data(), index)) {
 			Status status = deleteIfIndexFieldExists(doc, index);
 			if (!status.ok()) {
