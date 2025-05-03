@@ -167,8 +167,8 @@ namespace anudb {
 
 			table_options.whole_key_filtering = false;  // Only filter by prefix
 
-			options.table_factory.reset(NewBlockBasedTableFactory(table_options));
-
+			//options.table_factory.reset(NewBlockBasedTableFactory(table_options));
+			options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 			// Compression settings
 			options.compression_opts.level = 5;
 			options.compression = config.compression;
