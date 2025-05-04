@@ -695,7 +695,7 @@ void PointLockManager::Resize(uint32_t target_size) {
 }
 
 PointLockManager::RangeLockStatus PointLockManager::GetRangeLockStatus() {
-  return {};
+  return std::unordered_multimap<unsigned int, rocksdb::RangeLockInfo>();
 }
 
 Status PointLockManager::TryLock(PessimisticTransaction* /* txn */,
