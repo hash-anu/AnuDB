@@ -4,7 +4,7 @@ using namespace anudb;
 
 Status StorageEngine::open() {
 	rocksdb::Options options;
-
+        options.OptimizeForSmallDb();
 	RocksDBOptimizer::EmbeddedConfig config;
 
 	// Edge-device optimized configuration for efficient single operations
@@ -38,7 +38,6 @@ Status StorageEngine::open() {
 	options.allow_concurrent_memtable_write = false; // Reduce memory contention for single operations
 	options.enable_write_thread_adaptive_yield = true; // Better CPU utilization during writes
 	options.avoid_flush_during_shutdown = true;      // Faster shutdown
-	options.OptimizeForSmallDb();
 
 	// Optimize for faster point operations (get/put)
 	options.level_compaction_dynamic_level_bytes = false; // Simpler level management
