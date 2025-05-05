@@ -427,21 +427,83 @@ private:
             resp["message"] = std::string("Exception: ") + e.what();
         }
     }
+void send_response(std::string& payload, Work* work, std::string& response_topic) {
+   nng_msleep(400);
+    	std::lock_guard<std::mutex> lock(multiple_mtx_); // Lock if necessary
 
-    void send_response(std::string& payload, Work* work, std::string& response_topic) {
-        std::lock_guard<std::mutex> lock(multiple_mtx_);
-        nng_msg* out_msg;
-        nng_mqtt_msg_alloc(&out_msg, 0);
+    nng_msg* out_msg = nullptr;
+    int rv;
 
-        nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
-        nng_mqtt_msg_set_publish_qos(out_msg, 1);  // Set QoS to 1
-        nng_mqtt_msg_set_publish_topic(out_msg, response_topic.c_str());
-        nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)payload.data(), payload.size());
-        if (nng_ctx_sendmsg(work->ctx, out_msg, !NNG_FLAG_NONBLOCK) != 0 ) {  // send message
-            //wait for document to send
-            nng_msg_free(out_msg);
-	    }
+    // 1. Allocate Message
+    rv = nng_mqtt_msg_alloc(&out_msg, 0);
+    if (rv != 0) {
+        fprintf(stderr, "Failed to allocate nng message: %s\n", nng_strerror(rv));
+        return; // Cannot proceed
     }
+
+    // 2. Set Message Properties
+    nng_mqtt_msg_set_packet_type(out_msg, NNG_MQTT_PUBLISH);
+    nng_mqtt_msg_set_publish_qos(out_msg, 1); // QoS 1: At least once
+    nng_mqtt_msg_set_publish_topic(out_msg, response_topic.c_str());
+    // Consider setting retain flag if needed: nng_mqtt_msg_set_publish_retain(out_msg, true/false);
+    nng_mqtt_msg_set_publish_payload(out_msg, (uint8_t*)payload.data(), payload.size());
+
+    // 3. Attempt to Send (Blocking) with Retries for certain errors
+    const int max_retries = 3; // Example: Max 3 retries
+    int attempt = 0;
+    bool sent_successfully = false;
+
+    while (attempt <= max_retries && !sent_successfully) {
+        // Use 0 for blocking send flag
+        rv = nng_ctx_sendmsg(work->ctx, out_msg, 0); // Blocking send
+
+        if (rv == 0) {
+            // Success! NNG accepted the message for delivery (QoS 1 handling).
+            // NNG now owns the message (`out_msg`) and will manage its lifecycle
+            // (sending, waiting for PUBACK, internal retries if needed).
+            // DO NOT free out_msg here.
+            sent_successfully = true;
+            // out_msg is now owned by NNG, break the loop.
+            break;
+        }
+        else {
+            // Decide whether to retry based on the error
+            if (rv == NNG_ETIMEDOUT || rv == NNG_EAGAIN /* Potentially others like NNG_EFULL */) {
+                attempt++;
+                if (attempt <= max_retries) {
+			std::cerr << "Retrying in 1 second...\n";
+                    nng_msleep(1000); // Wait before retrying (consider exponential backoff)
+                    // Message `out_msg` is still owned by us since send failed,
+                    // so we can reuse it in the next attempt.
+                }
+                else {
+			std::cerr << "Max retries reached. Giving up.\n";
+                    // Free the message as NNG never took ownership.
+                    nng_msg_free(out_msg);
+                    break; // Exit loop after max retries
+                }
+            }
+            else {
+                // Non-recoverable error (e.g., NNG_ECLOSED, NNG_ENOMEM, NNG_EPROTO)
+		    std::cerr << "Non-retriable error encountered. Giving up.\n";
+                // Free the message as NNG never took ownership.
+                nng_msg_free(out_msg);
+                break; // Exit loop on non-retriable error
+            }
+        }
+    } // end while loop
+
+    // If the loop finished without sending successfully (e.g., max retries or non-retriable error)
+    // and the message hasn't been freed yet, ensure it's freed here.
+    // Note: This check might be redundant given the breaks and frees inside the loop,
+    // but adds safety. Check if `sent_successfully` is false. If it is, and the
+    // loop exited due to max_retries or non-retriable error, msg should already be free.
+    // If somehow loop exited differently without success and msg isn't free, handle here.
+    // However, the logic above *should* cover freeing on failure.
+
+    // The lock_guard automatically releases the mutex when it goes out of scope.
+}
+
     void handle_get_collections(json& req, json& resp) {
         if (db_) {
             std::string collections = "";
@@ -564,6 +626,7 @@ private:
                         if (status.ok()) {
                             std::string tmp = (std::string)doc.data().dump();
                             send_response(tmp, work, response_topic);
+                            //std::cout << doc.data().dump() << std::endl;
                         }
                         else {
                             std::cerr << "Error reading document: " << status.message() << std::endl;
