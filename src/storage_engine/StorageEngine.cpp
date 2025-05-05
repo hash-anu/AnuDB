@@ -4,7 +4,7 @@ using namespace anudb;
 
 Status StorageEngine::open() {
 	rocksdb::Options options;
-        options.OptimizeForSmallDb();
+	options.OptimizeForSmallDb();
 	RocksDBOptimizer::EmbeddedConfig config;
 
 	// Edge-device optimized configuration for efficient single operations
@@ -45,10 +45,6 @@ Status StorageEngine::open() {
 	options.max_bytes_for_level_multiplier = 8;           // Moderate level scaling
 	options.optimize_filters_for_hits = true;             // Optimize bloom filters
 	options.report_bg_io_stats = false;                   // Eliminate overhead from statistics
-
-	// Reduce unnecessary CPU usage
-	options.compression = rocksdb::kNoCompression;   // Disable compression for faster point operations
-	options.bottommost_compression = rocksdb::kNoCompression;
 	options.skip_stats_update_on_db_open = true;
 	options.skip_checking_sst_file_sizes_on_db_open = true;
 
@@ -176,7 +172,7 @@ Status StorageEngine::dropCollection(const std::string& name) {
 	return Status::OK();
 }
 
-std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> StorageEngine::getColumnFamilies() const{
+std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> StorageEngine::getColumnFamilies() const {
 	return columnFamilies_;
 }
 
@@ -239,13 +235,13 @@ Status StorageEngine::fetchDocIdsByOrder(const std::string& collection, const st
 			docIds.push_back(iterator->value().ToString());
 		}
 	}
-	
+
 	// delete iterator
 	delete iterator;
 	return Status::OK();
 }
 
-Status StorageEngine::fetchDocIdsForEqual(const std::string& collection, const std::string& prefix, std::vector<std::string>& docIds) const{
+Status StorageEngine::fetchDocIdsForEqual(const std::string& collection, const std::string& prefix, std::vector<std::string>& docIds) const {
 	//std::lock_guard<std::mutex> lock(db_mutex_);
 
 	auto it = columnFamilies_.find(collection);
@@ -300,7 +296,7 @@ Status StorageEngine::fetchDocIdsForLesser(const std::string& collection, const 
 		}
 		docIds.push_back(iterator->value().ToString());
 	}
-	
+
 	// delete iterator
 	delete iterator;
 	return Status::OK();
@@ -337,10 +333,10 @@ Status StorageEngine::getAll(const std::string& collection, std::vector<std::vec
 		return Status::NotFound("Collection not found: " + collection);
 	}
 	values.clear();
-	
+
 	rocksdb::Iterator* iterator = db_->NewIterator(RocksDBOptimizer::getReadOptions(), it->second);
-	
-	for (iterator->SeekToFirst();iterator->Valid(); iterator->Next()) {
+
+	for (iterator->SeekToFirst(); iterator->Valid(); iterator->Next()) {
 		rocksdb::Slice value_slice = iterator->value();
 
 		std::vector<uint8_t> value_vec(value_slice.data(), value_slice.data() + value_slice.size());
