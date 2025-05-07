@@ -8,9 +8,6 @@ Status StorageEngine::open() {
 	RocksDBOptimizer::EmbeddedConfig config;
 
 	// Edge-device optimized configuration for efficient single operations
-	// Memory footprint optimizations
-	config.write_buffer_size = 4 * 1024 * 1024;      // 4MB - smaller buffer to reduce memory usage
-	config.block_cache_size = 8 * 1024 * 1024;       // 8MB - moderate cache size for edge devices
 	config.max_open_files = 64;                      // Limit file handles to conserve resources
 
 	// Write optimizations for single operations
@@ -51,6 +48,7 @@ Status StorageEngine::open() {
 	// Improve read performance with focused caching
 	options.use_adaptive_mutex = true;               // Reduce mutex contention
 	options.new_table_reader_for_compaction_inputs = false; // Save memory
+	options.OptimizeForSmallDb();
 
 	// Get list of existing column families
 	std::vector<std::string> columnFamilies;
