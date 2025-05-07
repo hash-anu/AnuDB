@@ -4,7 +4,6 @@ using namespace anudb;
 
 Status StorageEngine::open() {
 	rocksdb::Options options;
-	options.OptimizeForSmallDb();
 	RocksDBOptimizer::EmbeddedConfig config;
 
 	// Edge-device optimized configuration for efficient single operations
