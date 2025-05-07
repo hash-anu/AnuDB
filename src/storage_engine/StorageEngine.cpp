@@ -2,7 +2,7 @@
 
 using namespace anudb;
 
-Status StorageEngine::open() {
+Status StorageEngine::open(bool walTracker) {
 	rocksdb::Options options;
 	RocksDBOptimizer::EmbeddedConfig config;
 
@@ -66,7 +66,7 @@ Status StorageEngine::open() {
 	for (const auto& cf : columnFamilies) {
 		columnFamilyDescriptors.emplace_back(cf, rocksdb::ColumnFamilyOptions());
 	}
-
+	wal_tracker_ = walTracker;
 	// Open the database with column families
 	std::vector<rocksdb::ColumnFamilyHandle*> handles;
 	rocksdb::DB* dbRaw;
@@ -84,6 +84,17 @@ Status StorageEngine::open() {
 		ownedHandles_.emplace_back(handles[i], [this](rocksdb::ColumnFamilyHandle* h) {
 			if (db_) db_->DestroyColumnFamilyHandle(h);
 			});
+	}
+	if (wal_tracker_) {
+		// Create column family ID to name mapping for WAL tracker
+		for (auto* handle : handles) {
+			cf_id_to_name_[handle->GetID()] = handle->GetName();
+			std::cout << "Column Family: " << handle->GetName() << " (ID: " << handle->GetID() << ")" << std::endl;
+		}
+
+		// Create WAL tracker
+		waltracker_ = new WalTracker(db_, cf_id_to_name_);
+		waltracker_->StartTracking();
 	}
 	// Print estimated memory usage
 	size_t estimated_mem = RocksDBOptimizer::estimateMemoryUsage(config);
@@ -113,6 +124,15 @@ Status StorageEngine::close() {
 		// Clear the ownership vector which will destroy all handles properly
 		ownedHandles_.clear();
 
+		if (wal_tracker_) {
+			// stop waltracker
+			waltracker_->StopTracking();
+			if (waltracker_) {
+				delete waltracker_;
+				waltracker_ = NULL;
+			}
+		}
+
 		// Close and reset the DB
 		if (db_) {
 			rocksdb::Status s = db_->Close();
@@ -128,6 +148,10 @@ Status StorageEngine::close() {
 	return Status::OK();
 }
 
+void StorageEngine::registerCallback(WalOperationCallback callback) {
+	waltracker_->RegisterCallback(callback);
+}
+
 Status StorageEngine::createCollection(const std::string& name) {
 	// Check if collection already exists
 	if (columnFamilies_.find(name) != columnFamilies_.end()) {
@@ -140,6 +164,10 @@ Status StorageEngine::createCollection(const std::string& name) {
 
 	if (!s.ok()) {
 		return Status::IOError(s.ToString());
+	}
+
+	if (wal_tracker_) {
+		waltracker_->UpdateColumnFamilyMap(handle->GetID(), handle->GetName());
 	}
 
 	// Store the handle
@@ -164,6 +192,11 @@ Status StorageEngine::dropCollection(const std::string& name) {
 	if (!s.ok()) {
 		return Status::IOError(s.ToString());
 	}
+
+	if (wal_tracker_) {
+		waltracker_->DeleteColumnFamilyMap(handle->GetID(), handle->GetName());
+	}
+
 	// Remove from our map
 	columnFamilies_.erase(it);
 	return Status::OK();

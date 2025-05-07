@@ -4,6 +4,7 @@
 #include "json.hpp"
 
 #include "Status.h"
+#include "WalTracker.h"
 
 #include "rocksdb/db.h"
 #include "rocksdb/table.h"
@@ -32,7 +33,7 @@ namespace anudb {
 	class StorageEngine {
 	public:
 		StorageEngine(const std::string& dbPath) : dbPath_(dbPath), index_delimiter_("__index__"){}
-		Status open();
+		Status open(bool WalTracker = false);
 		Status close();
 
 		Status createCollection(const std::string& name);
@@ -52,6 +53,7 @@ namespace anudb {
 		Status fetchDocIdsForLesser(const std::string& collection, const std::string& prefix, std::vector<std::string>& docIds) const;
 		Status fetchDocIdsByOrder(const std::string& collection, const std::string& key, std::vector<std::string>& docIds) const;
 		rocksdb::DB* getDB();
+		void registerCallback(WalOperationCallback callback);
 		virtual ~StorageEngine();
 		// Decode a Big-Endian encoded integer from a RocksDB key
 		static int64_t DecodeIntKey(const std::string& encoded) {
@@ -73,6 +75,9 @@ namespace anudb {
 		std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> columnFamilies_;
 		std::vector<std::unique_ptr<rocksdb::ColumnFamilyHandle, std::function<void(rocksdb::ColumnFamilyHandle*)>>> ownedHandles_;
 		std::string index_delimiter_;
+		bool wal_tracker_;
+		WalTracker* waltracker_;
+		std::unordered_map<uint32_t, std::string> cf_id_to_name_;
 		//mutable std::mutex db_mutex_;
 	};
 

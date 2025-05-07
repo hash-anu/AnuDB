@@ -1,6 +1,8 @@
 set(storage_engine_SRCS
     StorageEngine.h
     StorageEngine.cpp
+    WalTracker.h
+    WalTracker.cpp
     ${CMAKE_SOURCE_DIR}/third_party/rocksdb/include
 )
 
