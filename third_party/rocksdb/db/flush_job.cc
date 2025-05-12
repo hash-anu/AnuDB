@@ -662,7 +662,7 @@ bool FlushJob::MemPurgeDecider() {
     // (converges to n0 for large populations).
     uint64_t target_sample_size =
         static_cast<uint64_t>(ceil(n0 / (1.0 + (n0 / nentries))));
-    std::unordered_set<const char*> sentries = {};
+    std::unordered_set<const char*> sentries;
     // Populate sample entries set.
     mt->UniqueRandomSample(target_sample_size, &sentries);
 

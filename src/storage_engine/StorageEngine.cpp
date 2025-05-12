@@ -4,13 +4,9 @@ using namespace anudb;
 
 Status StorageEngine::open(bool walTracker) {
 	rocksdb::Options options;
-
 	RocksDBOptimizer::EmbeddedConfig config;
 
 	// Edge-device optimized configuration for efficient single operations
-	// Memory footprint optimizations
-	config.write_buffer_size = 4 * 1024 * 1024;      // 4MB - smaller buffer to reduce memory usage
-	config.block_cache_size = 8 * 1024 * 1024;       // 8MB - moderate cache size for edge devices
 	config.max_open_files = 64;                      // Limit file handles to conserve resources
 
 	// Write optimizations for single operations
@@ -45,16 +41,13 @@ Status StorageEngine::open(bool walTracker) {
 	options.max_bytes_for_level_multiplier = 8;           // Moderate level scaling
 	options.optimize_filters_for_hits = true;             // Optimize bloom filters
 	options.report_bg_io_stats = false;                   // Eliminate overhead from statistics
-
-	// Reduce unnecessary CPU usage
-	options.compression = rocksdb::kNoCompression;   // Disable compression for faster point operations
-	options.bottommost_compression = rocksdb::kNoCompression;
 	options.skip_stats_update_on_db_open = true;
 	options.skip_checking_sst_file_sizes_on_db_open = true;
 
 	// Improve read performance with focused caching
 	options.use_adaptive_mutex = true;               // Reduce mutex contention
 	options.new_table_reader_for_compaction_inputs = false; // Save memory
+	options.OptimizeForSmallDb();
 
 	// Get list of existing column families
 	std::vector<std::string> columnFamilies;
@@ -209,7 +202,7 @@ Status StorageEngine::dropCollection(const std::string& name) {
 	return Status::OK();
 }
 
-std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> StorageEngine::getColumnFamilies() const{
+std::unordered_map<std::string, rocksdb::ColumnFamilyHandle*> StorageEngine::getColumnFamilies() const {
 	return columnFamilies_;
 }
 
@@ -272,13 +265,13 @@ Status StorageEngine::fetchDocIdsByOrder(const std::string& collection, const st
 			docIds.push_back(iterator->value().ToString());
 		}
 	}
-	
+
 	// delete iterator
 	delete iterator;
 	return Status::OK();
 }
 
-Status StorageEngine::fetchDocIdsForEqual(const std::string& collection, const std::string& prefix, std::vector<std::string>& docIds) const{
+Status StorageEngine::fetchDocIdsForEqual(const std::string& collection, const std::string& prefix, std::vector<std::string>& docIds) const {
 	//std::lock_guard<std::mutex> lock(db_mutex_);
 
 	auto it = columnFamilies_.find(collection);
@@ -333,7 +326,7 @@ Status StorageEngine::fetchDocIdsForLesser(const std::string& collection, const 
 		}
 		docIds.push_back(iterator->value().ToString());
 	}
-	
+
 	// delete iterator
 	delete iterator;
 	return Status::OK();
@@ -370,10 +363,10 @@ Status StorageEngine::getAll(const std::string& collection, std::vector<std::vec
 		return Status::NotFound("Collection not found: " + collection);
 	}
 	values.clear();
-	
+
 	rocksdb::Iterator* iterator = db_->NewIterator(RocksDBOptimizer::getReadOptions(), it->second);
-	
-	for (iterator->SeekToFirst();iterator->Valid(); iterator->Next()) {
+
+	for (iterator->SeekToFirst(); iterator->Valid(); iterator->Next()) {
 		rocksdb::Slice value_slice = iterator->value();
 
 		std::vector<uint8_t> value_vec(value_slice.data(), value_slice.data() + value_slice.size());
