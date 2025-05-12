@@ -134,10 +134,12 @@ For embedded platforms, you may need to use a cross-compiler toolchain:
 ```bash
 # Configure with cross-compiler
 cmake .. \
-  -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
-  -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
-  -DCMAKE_C_FLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=hard -DNIOSTATS_CONTEXT=1" \
-  -DCMAKE_CXX_FLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=hard -DNIOSTATS_CONTEXT=1 -Wno-error" \
+  -DCMAKE_SYSTEM_NAME=Linux \
+  -DCMAKE_SYSTEM_PROCESSOR=arm \
+  -DCMAKE_C_COMPILER=<path-to-arm-gcc>/arm-linux-gnueabihf-gcc \
+  -DCMAKE_CXX_COMPILER=<path-to-arm-g++>/arm-linux-gnueabihf-g++ \
+  -DCMAKE_C_FLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=hard -DNIOSTATS_CONTEXT=1 -std=c99" \
+  -DCMAKE_CXX_FLAGS="-march=armv7-a -mfpu=neon -mfloat-abi=hard -DNIOSTATS_CONTEXT=1 -DNPERF_CONTEXT -Wno-error --std=c++11" \
   -DWITH_ALL_TESTS=OFF \
   -DWITH_TESTS=OFF \
   -DWITH_TOOLS=OFF \
