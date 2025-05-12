@@ -35,14 +35,18 @@ void executeQuery(Collection* collection, const json& query, const std::string& 
 #include <chrono>
 // Mutex for thread-safe console output
 std::mutex console_mutex;
-// Function to get current timestamp as string
+// Get current time as formatted string
 std::string GetTimestamp() {
-    auto now = std::chrono::system_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&time_t_now), "%Y-%m-%d %H:%M:%S");
-    return ss.str();
-}
+            std::stringstream ss;
+auto now = std::chrono::system_clock::now();
+std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
+std::tm* tm_info = std::localtime(&now_time_t);
+
+char time_buffer[20]; // "YYYY-MM-DD HH:MM:SS"
+std::strftime(time_buffer, sizeof(time_buffer), "%Y-%m-%d %H:%M:%S", tm_info);
+ss << time_buffer;
+        return ss.str();
+    }
 // WAL operation handler
 void WalOperationHandler(const std::string& operation,
     const std::string& cf_name,

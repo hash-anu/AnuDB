@@ -42,7 +42,7 @@ namespace anudb {
     public:
         // Constructor - takes a RocksDB instance and optional CF mapping
         WalTracker(rocksdb::DB* db,
-            const std::unordered_map<uint32_t, std::string>& cf_map = {});
+            const std::unordered_map<uint32_t, std::string>& cf_map);
 
         // Destructor - stops tracking thread
         ~WalTracker();
