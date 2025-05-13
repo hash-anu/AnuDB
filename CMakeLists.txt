@@ -58,6 +58,10 @@ set(WITH_FUZZER OFF CACHE BOOL "Disable fuzzing tools" FORCE)
 add_subdirectory(third_party/rocksdb)
 # Add storage engine
 add_subdirectory(src/storage_engine)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+target_compile_options(rocksdb PRIVATE -frtti)
+target_compile_options(libstorage PRIVATE -frtti)
+endif()
 
 set(LIBRARY_SOURCES ${CMAKE_SOURCE_DIR}/src/Cursor.cpp ${CMAKE_SOURCE_DIR}/src/Database.cpp ${CMAKE_SOURCE_DIR}/src/Collection.cpp ${CMAKE_SOURCE_DIR}/src/Document.cpp)
 

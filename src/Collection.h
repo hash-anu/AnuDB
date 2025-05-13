@@ -10,16 +10,6 @@
 extern "C" uintptr_t __cdecl _beginthreadex(void*, unsigned int,
 	unsigned int(__stdcall*)(void*), void*, unsigned int, unsigned int*);
 #endif
-#ifdef MAKE_UNIQUE
-#include <memory>
-
-namespace std {
-    template <typename T, typename... Args>
-    std::unique_ptr<T> make_unique(Args&&... args) {
-        return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-    }
-}
-#endif
 
 namespace anudb {
 	// Collection class representing a MongoDB-like collection
