@@ -125,6 +125,7 @@ Status StorageEngine::close() {
 		ownedHandles_.clear();
 
 		if (wal_tracker_) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			// stop waltracker
 			waltracker_->StopTracking();
 			if (waltracker_) {
@@ -166,8 +167,20 @@ Status StorageEngine::createCollection(const std::string& name) {
 		return Status::IOError(s.ToString());
 	}
 
-	if (wal_tracker_) {
+	if (wal_tracker_ /* && handle->GetName().find(index_delimiter_) == std::string::npos*/) {
 		waltracker_->UpdateColumnFamilyMap(handle->GetID(), handle->GetName());
+		// Wrap the event string inside a "data" key
+		std::string event_string = "CREATE_CF:" + handle->GetName();
+		json wrapped = {
+			{"data", event_string}
+		};
+		// Serialize to MessagePack
+		std::vector<uint8_t> msgpack_data = json::to_msgpack(wrapped);
+		// Insert into RocksDB
+		rocksdb::WriteBatch batch;
+		batch.Put("__meta__event", rocksdb::Slice(reinterpret_cast<const char*>(msgpack_data.data()), msgpack_data.size()));
+		// Write to DB
+		db_->Write(rocksdb::WriteOptions(), &batch);
 	}
 
 	// Store the handle
@@ -193,8 +206,20 @@ Status StorageEngine::dropCollection(const std::string& name) {
 		return Status::IOError(s.ToString());
 	}
 
-	if (wal_tracker_) {
+	if (wal_tracker_ /*&& handle->GetName().find(index_delimiter_) == std::string::npos*/) {
 		waltracker_->DeleteColumnFamilyMap(handle->GetID(), handle->GetName());
+		// Wrap the event string inside a "data" key
+		std::string event_string = "DELETE_CF:" + handle->GetName();
+		json wrapped = {
+			{"data", event_string}
+		};
+		// Serialize to MessagePack
+		std::vector<uint8_t> msgpack_data = json::to_msgpack(wrapped);
+		// Insert into RocksDB
+		rocksdb::WriteBatch batch;
+		batch.Put("__meta__event", rocksdb::Slice(reinterpret_cast<const char*>(msgpack_data.data()), msgpack_data.size()));
+		// Write to DB
+		db_->Write(rocksdb::WriteOptions(), &batch);
 	}
 
 	// Remove from our map

@@ -27,7 +27,6 @@ void WalTracker::UpdateColumnFamilyMap(uint32_t id, const std::string& name) {
     if (name.find("__index__") != std::string::npos) {
         return;
     }
-    callback_("CREATE_CF_MANUAL", name, std::to_string(id), "");
     cf_id_to_name_[id] = name;
 }
 
@@ -35,7 +34,6 @@ void WalTracker::DeleteColumnFamilyMap(uint32_t id, const std::string& name) {
     if (name.find("__index__") != std::string::npos) {
         return;
     }
-    callback_("DELETE_CF_MANUAL", name, std::to_string(id), "");
     cf_id_to_name_.erase(id);
 }
 

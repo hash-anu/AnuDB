@@ -53,7 +53,9 @@ void WalOperationHandler(const std::string& operation,
 	const std::string& key,
 	const std::string& value) {
 	std::lock_guard<std::mutex> lock(console_mutex);
-
+	if (value.find("__index__") != std::string::npos) {
+		return;  // or continue; depending on context
+	}
 	std::cout << "[" << GetTimestamp() << "] [WAL] ";
 	std::cout << std::left << std::setw(10) << operation;
 	std::cout << " | CF: " << std::setw(15) << cf_name;
@@ -62,7 +64,6 @@ void WalOperationHandler(const std::string& operation,
 	if (!value.empty()) {
 		// Truncate value if it's too long
 		std::string display_value = value;
-
 		std::cout << " | Value: " << display_value;
 	}
 
@@ -711,13 +712,21 @@ int main() {
 		std::cout << "Collection dropped successfully." << std::endl;
 	}
 
+	collectionToDrop = "products_import";
+	std::cout << "\nDropping collection '" << collectionToDrop << "'" << std::endl;
+	status = db.dropCollection(collectionToDrop);
+	if (!status.ok()) {
+		std::cerr << "Failed to drop collection: " << status.message() << std::endl;
+	}
+	else {
+		std::cout << "Collection dropped successfully." << std::endl;
+	}
 	// Close database
 	status = db.close();
 	if (!status.ok()) {
 		std::cerr << "Failed to close database: " << status.message() << std::endl;
 		return 1;
 	}
-
 	std::cout << "\nDatabase closed successfully." << std::endl;
 	std::cout << "C++ version: " << __cplusplus << std::endl;
 
