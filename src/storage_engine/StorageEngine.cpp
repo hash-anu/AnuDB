@@ -89,7 +89,6 @@ Status StorageEngine::open(bool walTracker) {
 		// Create column family ID to name mapping for WAL tracker
 		for (auto* handle : handles) {
 			cf_id_to_name_[handle->GetID()] = handle->GetName();
-			std::cout << "Column Family: " << handle->GetName() << " (ID: " << handle->GetID() << ")" << std::endl;
 		}
 
 		// Create WAL tracker
@@ -98,7 +97,6 @@ Status StorageEngine::open(bool walTracker) {
 	}
 	// Print estimated memory usage
 	size_t estimated_mem = RocksDBOptimizer::estimateMemoryUsage(config);
-	//std::cout << "Estimated memory usage by storage engine: " << (estimated_mem >> 20) << "MB\n";
 
 	return Status::OK();
 }
