@@ -40,6 +40,7 @@ Ready to try AnuDB for your project? Follow these simple steps to get started qu
 - **Import/Export**: Easy JSON import and export for data migration. Exported JSON file can be also used to migrate data to Postgresql/SQL sever/MySQL/Oracle DB
 - **C++11 Compatible**: Designed to support a wide range of embedded devices efficiently
 - **Windows/Linux Support**: Designed for Windows/Linux environments and embedded Linux platforms
+- **WAL Tracking**: Real-time monitoring of database operations through customizable callback functions
 - **MQTT Interface**: Connect and operate via MQTT protocol from various platforms
 - **High Concurrency**: Supports 32 concurrent nng worker threads(configurable using [CONCURRENT_THREADS](https://github.com/hash-anu/AnuDB/blob/main/mqtt/AnuDBMqttClient.cpp)) for handling MQTT requests
 - **TLS Security**: Secure communications using mbedTLS for encrypted MQTT connections
