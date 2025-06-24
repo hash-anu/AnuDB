@@ -9,7 +9,7 @@ namespace anudb {
     class Database {
     public:
         Database(const std::string& dbPath) : engine_(dbPath) {}
-        Status open();
+        Status open(bool walTracker = false);
         Status close();
         Status createCollection(const std::string& name);
         Status dropCollection(const std::string& name);
@@ -18,6 +18,7 @@ namespace anudb {
         Status readAllDocuments(const std::string& collectionName, std::vector<Document>& docIds);
         Status exportAllToJsonAsync(const std::string& collectionName, const std::string& exportPath);
         Status importFromJsonFile(const std::string& collectionName, const std::string& importFile);
+        void registerCallback(WalOperationCallback callback);
 
         Collection* getCollection(const std::string& name);
         std::vector<std::string> getCollectionNames() const;

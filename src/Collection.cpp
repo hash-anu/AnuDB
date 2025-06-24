@@ -450,6 +450,7 @@ Status Collection::deleteIfIndexFieldExists(const Document& doc, const std::stri
 	return engine_->remove(getIndexCfName(index), key.str());
 }
 
+#if 0
 Status Collection::importFromJsonFile(const std::string& filePath) {
 	try
 	{
@@ -511,6 +512,91 @@ Status Collection::importFromJsonFile(const std::string& filePath) {
 		return Status::InternalError("JSON import error: " + std::string(e.what()));
 	}
 }
+#else
+Status Collection::importFromJsonFile(const std::string& filePath) {
+	try {
+		std::ifstream file(filePath, std::ios::binary);
+		if (!file.is_open()) {
+			return Status::IOError("Could not open file: " + filePath);
+		}
+
+		int successCount = 0;
+		int failureCount = 0;
+
+		// Create parser in a scope to ensure cleanup
+		{
+			MemoryEfficientJsonParser parser(file);
+
+			std::string objectStr;
+			while (!(objectStr = parser.extractNextObject()).empty()) {
+				try {
+					// Parse in a nested scope for immediate cleanup
+					{
+						json item = json::parse(objectStr);
+
+						// Clear immediately after parsing
+						objectStr.clear();
+						objectStr.shrink_to_fit();
+
+						if (!item.is_object()) {
+							failureCount++;
+							continue;
+						}
+
+						std::string docId;
+						if (item.contains("_id")) {
+							docId = item["_id"].get<std::string>();
+						}
+						else {
+							docId = "doc_" + std::to_string(successCount + failureCount);
+						}
+
+						// Create document in nested scope
+						{
+							Document doc(docId, item);
+							Status status = createDocument(doc);
+							if (status.ok()) {
+								successCount++;
+							}
+							else {
+								failureCount++;
+								std::cerr << "Failed to import document " << docId << ": "
+									<< status.message() << std::endl;
+							}
+						} // doc destroyed here
+					} // item destroyed here
+
+				}
+				catch (const json::parse_error& e) {
+					failureCount++;
+					objectStr.clear();
+					objectStr.shrink_to_fit();
+					continue;
+				}
+			}
+
+			if (!parser.isArrayStarted()) {
+				return Status::NotSupported("File must contain a JSON array of objects: " + filePath);
+			}
+		} // parser destroyed here, buffer memory freed
+
+		if (successCount == 0 && failureCount == 0) {
+			return Status::NotSupported("No valid JSON objects found in array: " + filePath);
+		}
+
+		std::cout << "JSON Array Import Summary:\n"
+			<< "File: " << filePath << "\n"
+			<< "Successfully imported: " << successCount << " documents\n"
+			<< "Failed to import: " << failureCount << " documents" << std::endl;
+
+		return Status::OK();
+
+	}
+	catch (const std::exception& e) {
+		return Status::InternalError("JSON import error: " + std::string(e.what()));
+	}
+}
+#endif
 
 Status Collection::exportAllToJsonAsync(const std::string& exportPath) {
 	ExportTask task(engine_, name_, exportPath);

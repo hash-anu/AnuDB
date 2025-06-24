@@ -2,9 +2,9 @@
 
 using namespace anudb;
 
-Status Database::open() {
+Status Database::open(bool walTracker) {
     isDbOpen_ = true;
-    return engine_.open();
+    return engine_.open(walTracker);
 }
 
 Status Database::close() {
@@ -75,6 +75,10 @@ Status Database::exportAllToJsonAsync(const std::string& collectionName, const s
         return Status::NotFound("Collection not found: " + collectionName);
     }
     return collection->exportAllToJsonAsync(exportPath);
+}
+
+void Database::registerCallback(WalOperationCallback callback) {
+    engine_.registerCallback(callback);
 }
 
 Status Database::importFromJsonFile(const std::string& collectionName, const std::string& importFile) {

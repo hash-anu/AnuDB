@@ -2,7 +2,7 @@
 
 using namespace anudb;
 
-Status StorageEngine::open() {
+Status StorageEngine::open(bool walTracker) {
 	rocksdb::Options options;
 	RocksDBOptimizer::EmbeddedConfig config;
 
@@ -66,7 +66,7 @@ Status StorageEngine::open() {
 	for (const auto& cf : columnFamilies) {
 		columnFamilyDescriptors.emplace_back(cf, rocksdb::ColumnFamilyOptions());
 	}
-
+	wal_tracker_ = walTracker;
 	// Open the database with column families
 	std::vector<rocksdb::ColumnFamilyHandle*> handles;
 	rocksdb::DB* dbRaw;
@@ -85,9 +85,18 @@ Status StorageEngine::open() {
 			if (db_) db_->DestroyColumnFamilyHandle(h);
 			});
 	}
+	if (wal_tracker_) {
+		// Create column family ID to name mapping for WAL tracker
+		for (auto* handle : handles) {
+			cf_id_to_name_[handle->GetID()] = handle->GetName();
+		}
+
+		// Create WAL tracker
+		waltracker_ = new WalTracker(db_, cf_id_to_name_);
+		waltracker_->StartTracking();
+	}
 	// Print estimated memory usage
 	size_t estimated_mem = RocksDBOptimizer::estimateMemoryUsage(config);
-	//std::cout << "Estimated memory usage by storage engine: " << (estimated_mem >> 20) << "MB\n";
 
 	return Status::OK();
 }
@@ -113,6 +122,16 @@ Status StorageEngine::close() {
 		// Clear the ownership vector which will destroy all handles properly
 		ownedHandles_.clear();
 
+		if (wal_tracker_) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			// stop waltracker
+			waltracker_->StopTracking();
+			if (waltracker_) {
+				delete waltracker_;
+				waltracker_ = NULL;
+			}
+		}
+
 		// Close and reset the DB
 		if (db_) {
 			rocksdb::Status s = db_->Close();
@@ -128,6 +147,10 @@ Status StorageEngine::close() {
 	return Status::OK();
 }
 
+void StorageEngine::registerCallback(WalOperationCallback callback) {
+	waltracker_->RegisterCallback(callback);
+}
+
 Status StorageEngine::createCollection(const std::string& name) {
 	// Check if collection already exists
 	if (columnFamilies_.find(name) != columnFamilies_.end()) {
@@ -140,6 +163,22 @@ Status StorageEngine::createCollection(const std::string& name) {
 
 	if (!s.ok()) {
 		return Status::IOError(s.ToString());
+	}
+
+	if (wal_tracker_ /* && handle->GetName().find(index_delimiter_) == std::string::npos*/) {
+		waltracker_->UpdateColumnFamilyMap(handle->GetID(), handle->GetName());
+		// Wrap the event string inside a "data" key
+		std::string event_string = "CREATE_CF:" + handle->GetName();
+		json wrapped = {
+			{"data", event_string}
+		};
+		// Serialize to MessagePack
+		std::vector<uint8_t> msgpack_data = json::to_msgpack(wrapped);
+		// Insert into RocksDB
+		rocksdb::WriteBatch batch;
+		batch.Put("__meta__event", rocksdb::Slice(reinterpret_cast<const char*>(msgpack_data.data()), msgpack_data.size()));
+		// Write to DB
+		db_->Write(rocksdb::WriteOptions(), &batch);
 	}
 
 	// Store the handle
@@ -164,6 +203,23 @@ Status StorageEngine::dropCollection(const std::string& name) {
 	if (!s.ok()) {
 		return Status::IOError(s.ToString());
 	}
+
+	if (wal_tracker_ /*&& handle->GetName().find(index_delimiter_) == std::string::npos*/) {
+		waltracker_->DeleteColumnFamilyMap(handle->GetID(), handle->GetName());
+		// Wrap the event string inside a "data" key
+		std::string event_string = "DELETE_CF:" + handle->GetName();
+		json wrapped = {
+			{"data", event_string}
+		};
+		// Serialize to MessagePack
+		std::vector<uint8_t> msgpack_data = json::to_msgpack(wrapped);
+		// Insert into RocksDB
+		rocksdb::WriteBatch batch;
+		batch.Put("__meta__event", rocksdb::Slice(reinterpret_cast<const char*>(msgpack_data.data()), msgpack_data.size()));
+		// Write to DB
+		db_->Write(rocksdb::WriteOptions(), &batch);
+	}
+
 	// Remove from our map
 	columnFamilies_.erase(it);
 	return Status::OK();
